@@ -5,6 +5,7 @@ A TypeScript-based application that automatically captures, processes, and analy
 ## 🎯 Overview
 
 Post-Call Agent is an intelligent meeting intelligence platform that:
+
 - **Captures** live meeting sessions from Google Meet using automated bot agents
 - **Processes** raw caption data into structured transcript segments
 - **Extracts** actionable artifacts including action items, decisions, and summary points
@@ -24,21 +25,25 @@ Post-Call Agent is an intelligent meeting intelligence platform that:
 ### Core Components
 
 - **Bot Layer** (`/bot`): Handles automated browser-based meeting capture
+
   - `GoogleMeetBot`: Main bot class for Google Meet interaction
   - Browser session management
   - Caption event monitoring
 
 - **Capture Service** (`/capture`): Orchestrates the meeting capture workflow
+
   - Bot initialization and lifecycle management
   - Meeting status tracking
   - Execution artifact collection
 
 - **Transcript Processing** (`/transcript`): Processes raw data to transcripts
+
   - `TranscriptServices`: Manages transcript segment creation
   - `TranscriptController`: Coordinates transcript processing logic
   - `AggregateProcessor`: Aggregates and processes caption events
 
 - **Models** (`/models`): Database models and services
+
   - Meeting management
   - Bot session tracking
   - Execution artifact storage
@@ -140,12 +145,14 @@ The server will start on `http://localhost:8000`
 ## 📡 API Endpoints
 
 ### Meetings
+
 - `GET /meeting` - List all meetings
 - `POST /meeting` - Create a new meeting
 - `GET /meeting/:id` - Get meeting details
 - `POST /meeting/:id/capture` - Start capturing a meeting
 
 ### Transcripts
+
 - `GET /transcript/:meetingId` - Get meeting transcript
 - `GET /transcript/:meetingId/segments` - Get transcript segments
 
@@ -154,27 +161,33 @@ The server will start on `http://localhost:8000`
 ### Core Models
 
 **Meeting**
+
 - Stores meeting metadata and status
 - Links to bot sessions, transcripts, and artifacts
 
 **TranscriptSegment**
+
 - Individual transcript entries with speaker, timestamp, and content
 - Source type (CAPTION, SPEECH_RECOGNITION, etc.)
 
 **MeetingBotSession**
+
 - Tracks bot participation in meetings
 - Records join/leave events and success status
 
 **ExecutionArtifact**
+
 - Stores extracted action items, decisions, and summaries
 - Includes priority, visibility, and confidence levels
 
 **CaptionEvent**
+
 - Raw caption data from Google Meet
 
 ## 📝 Development
 
 ### Project Structure
+
 ```
 post-call-agent/
 ├── src/                    # Application entry point
@@ -188,6 +201,7 @@ post-call-agent/
 ```
 
 ### Scripts
+
 ```bash
 npm run dev         # Run development server
 npm run build       # Build TypeScript
