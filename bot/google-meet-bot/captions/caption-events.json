@@ -1,0 +1,77 @@
+[
+  {
+    "seq": 1,
+    "speakerLabel": "Alice",
+    "rawText": "So",
+    "observedAt": "10:00:01"
+  },
+  {
+    "seq": 2,
+    "speakerLabel": "Alice",
+    "rawText": "So the",
+    "observedAt": "10:00:02"
+  },
+  {
+    "seq": 3,
+    "speakerLabel": "Alice",
+    "rawText": "So the plan",
+    "observedAt": "10:00:03"
+  },
+  {
+    "seq": 4,
+    "speakerLabel": null,
+    "rawText": "So the plan is",
+    "observedAt": "10:00:04"
+  },
+  {
+    "seq": 5,
+    "speakerLabel": null,
+    "rawText": "So the plan is to ship",
+    "observedAt": "10:00:05"
+  },
+  {
+    "seq": 6,
+    "speakerLabel": null,
+    "rawText": "So the plan is to ship",
+    "observedAt": "10:00:06"
+  },
+
+  {
+    "seq": 7,
+    "speakerLabel": "Bob",
+    "rawText": "Yes",
+    "observedAt": "10:00:08"
+  },
+  {
+    "seq": 8,
+    "speakerLabel": "Bob",
+    "rawText": "Yes I agree",
+    "observedAt": "10:00:09"
+  },
+
+  {
+    "seq": 9,
+    "speakerLabel": "Alice",
+    "rawText": "We can do it",
+    "observedAt": "10:00:11"
+  },
+  {
+    "seq": 10,
+    "speakerLabel": null,
+    "rawText": "We can do it by Friday",
+    "observedAt": "10:00:12"
+  },
+
+  {
+    "seq": 11,
+    "speakerLabel": "Alice",
+    "rawText": "Actually",
+    "observedAt": "10:00:14"
+  },
+  {
+    "seq": 12,
+    "speakerLabel": "Alice",
+    "rawText": "Actually no",
+    "observedAt": "10:00:15"
+  }
+]

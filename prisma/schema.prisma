@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  
+ 
+}
+
+model Meeting{
+  id  String @id @default(cuid())
+  meetingUrl String 
+  startTime DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  status MeetingStatus @default(SCHEDULED)
+  transcriptTimelines TranscriptSegment[]
+  meetingBotSession MeetingBotSession[]
+  executionArtifacts ExecutionArtifact[]
+captionEvents CaptionEvent[]
+
+}
+
+model TranscriptSegment{
+id String @id @default(cuid())
+meetingId String
+startTime DateTime
+endTime DateTime
+text String
+speaker String
+source SourceType @default(CAPTION)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+meeting Meeting @relation(fields: [meetingId],references: [id])
+
+ @@index([meetingId])
+}
+
+model MeetingBotSession{
+  id String @id @default(cuid())
+  meetingId String 
+  browserSessionId String
+joinStartAt DateTime? 
+joinEndAt DateTime?
+joinSuccess Boolean @default(false)
+failureReason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  meeting Meeting @relation(fields: [meetingId],references: [id])
+
+  @@index([meetingId])
+}
+
+
+model ExecutionArtifact{
+  id String @id @default(cuid())
+  meetingId String 
+  type ExecutionArtifactType
+  summary String
+  owner String?
+  visibility VisibilityType
+  priority PriorityType
+  dueDate DateTime?
+  confidence ConfidenceType
+  createdAt DateTime @default(now())
+  sourceStartTime DateTime
+  sourceEndTime DateTime
+  updatedAt DateTime @updatedAt
+   meeting Meeting @relation(fields: [meetingId],references: [id])
+
+   @@index([meetingId])
+}
+
+
+
+model CaptionEvent {
+  id             String            @id @default(cuid())
+  meetingId      String
+  sequenceNumber Int
+  observedAt     DateTime
+  rawText        String
+  speakerLabel  String?
+  isPartial      Boolean           @default(true)
+  source         SourceType  @default(CAPTION)
+
+  createdAt      DateTime          @default(now())
+
+  meeting        Meeting           @relation(fields: [meetingId], references: [id])
+
+  @@index([meetingId])
+  @@index([meetingId, sequenceNumber])
+}
+
+enum SourceType{
+  CAPTION
+  STT
+}
+enum ExecutionArtifactType{
+ACTION
+BLOCKER
+PENDING
+RISK
+DECISION
+}
+
+enum VisibilityType{
+  INTERNAL
+  CLIENT
+}
+
+enum ConfidenceType{
+  HIGH 
+  MEDIUM 
+  LOW
+
+}
+enum MeetingStatus{
+  SCHEDULED
+  JOINED
+  CAPTURING
+  CAPTURED
+  FAILED
+}
+
+enum PriorityType{
+  HIGH
+  MEDIUM
+  LOW
+}

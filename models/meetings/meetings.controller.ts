@@ -1,0 +1,28 @@
+import { Request, Response } from "express";
+import meetingsServices from "./meetings.services.js";
+import AggregateProcessor from "../../transcript/aggregate_procesesor.js";
+import TranscriptProcessor from "../../transcript/transcript.controller.js";
+
+class MeetingsController {
+  constructor() {}
+
+  async scheduleMeeting(req: Request, res: Response) {
+    const body = req.body;
+    try {
+      if (!body.meetingUrl || !body.startTime) {
+        throw new Error("Missing required fields, meeting URL or start time");
+      }
+      await meetingsServices.startMeeting({
+        meetingUrl: body.meetingUrl,
+        startTime: new Date(body.startTime),
+      });
+      res.status(200).json({ message: "Meeting scheduled successfully" });
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : "Internal server error",
+      });
+    }
+  }
+}
+
+export default new MeetingsController();
