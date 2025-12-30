@@ -1,12 +1,15 @@
 import captionsServices from "../bot/google-meet-bot/captions/captions.services";
 import { CaptionEvent } from "../generated/prisma";
 import AggregateProcessor from "./aggregate_procesesor";
+import TranscriptServices from "./transcript.services";
 
 class TranscriptProcessor {
   private rawCaptionData: CaptionEvent[] | [] = [];
   private meetingId: string;
+  private transcriptService: TranscriptServices;
   constructor(meetingId: string) {
     this.meetingId = meetingId;
+    this.transcriptService = new TranscriptServices(this.meetingId);
   }
   async processTranscript() {
     try {
@@ -24,7 +27,7 @@ class TranscriptProcessor {
 
       const aggregatedData = aggregateProcessor.flush();
       if (aggregatedData && aggregatedData.length) {
-        console.log(aggregatedData);
+        this.transcriptService.createTranscriptSegment(aggregatedData);
       }
     } catch (error) {
       throw new Error("Error while processing raw event data");
