@@ -1,9 +1,5 @@
 import { prisma } from "../../../config/prisma";
-import {
-  CaptionEvent,
-  SourceType,
-  TranscriptSource,
-} from "../../../generated/prisma";
+import { CaptionEvent, SourceType } from "../../../generated/prisma";
 
 interface EventInterface {
   meetingId: string;
@@ -18,8 +14,8 @@ class CaptionServices {
       meetingId: e.meetingId,
       speakerLabel: e.speaker,
       rawText: e.text,
-      observedAt: e.observedAt,
-      source: TranscriptSource.CAPTIONS,
+      observedAt: new Date(e.observedAt),
+      source: SourceType.CAPTION,
       sequenceNumber: e.seq_no,
     }));
     try {

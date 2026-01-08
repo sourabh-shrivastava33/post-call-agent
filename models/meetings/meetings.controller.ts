@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import meetingsServices from "./meetings.services.js";
-import AggregateProcessor from "../../transcript/aggregate_procesesor.js";
-import TranscriptProcessor from "../../transcript/transcript.controller.js";
+import OrchestratorAgent from "../../ai/agents/orchestrator_agent";
 
 class MeetingsController {
   constructor() {}

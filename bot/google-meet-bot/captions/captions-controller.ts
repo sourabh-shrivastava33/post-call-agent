@@ -2,6 +2,7 @@ import { Locator, Page, ConsoleMessage } from "playwright";
 import CaptionAvailabilityGate from "./caption-availability-gate";
 import { CaptionObserver } from "./captions-observer";
 import captionsServices from "./captions.services";
+import { logger } from "../../../shared/logger";
 class CaptionController {
   private captionContainer: Locator | null = null;
   gate = new CaptionAvailabilityGate();
@@ -84,7 +85,7 @@ class CaptionController {
         await captionsServices.createRawCaptionEventBatch(this.captionBatch);
       }
     } catch (error) {
-      throw new Error(
+      logger.log(
         `Error while entering raw caption data events, Error: ${JSON.stringify(
           error
         )}`

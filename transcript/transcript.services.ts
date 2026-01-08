@@ -38,5 +38,19 @@ class TranscriptServices {
       );
     }
   }
+
+  async getAllTranscriptSegmentByMeetingId(meetingId: string) {
+    try {
+      const allTranscriptSegments = await prisma.transcriptSegment.findMany({
+        where: { meetingId: meetingId },
+        orderBy: {
+          startTime: "asc",
+        },
+      });
+      return allTranscriptSegments;
+    } catch (error) {
+      console.log("Error while fetching all transcripts segments");
+    }
+  }
 }
 export default TranscriptServices;

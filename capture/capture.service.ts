@@ -73,6 +73,7 @@ class CaptureService {
         botEmail: botMail!,
         botPassword: botPassword!,
         onCallbacks: onCallbacks,
+        meetingId: meetingId,
       });
 
       googleMeetBot

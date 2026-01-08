@@ -2,9 +2,11 @@ import BrowserManager from "./browserManagement";
 import { Page } from "playwright";
 import captionsController from "./captions/captions-controller";
 import { CaptionObserver } from "./captions/captions-observer";
+import startExecution from "../../ai/start_execution";
 interface GoogleMeetBotParams {
   botEmail: string;
   botPassword: string;
+  meetingId: string;
   onCallbacks?: {
     onJoining?: () => void;
     onJoined?: () => void;
@@ -19,8 +21,11 @@ class GoogleMeetBot {
   private page: Page | null = null;
   private hasJoined = false;
   private hasEnded = false;
+  private meetingId: string;
 
-  constructor(private params: GoogleMeetBotParams) {}
+  constructor(private params: GoogleMeetBotParams) {
+    this.meetingId = params.meetingId;
+  }
 
   async initialize() {
     const manager = BrowserManager.getInstance();
@@ -215,6 +220,7 @@ class GoogleMeetBot {
           clearInterval(pollInterval);
           await captionsController.dispose(this.page);
           await this.params.onCallbacks!.onMeetingEnd!(meetingId);
+          await startExecution(this.meetingId);
           return;
         }
 
