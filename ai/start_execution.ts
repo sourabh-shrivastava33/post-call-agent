@@ -23,36 +23,40 @@ async function startExecution(meetingId: string): Promise<void> {
         });
       },
       onWorkflowFailed: async (failureReason: string) => {
-        await meetingsServices.updateMeetingStatus({
-          meetingId,
-          status: MeetingStatus.FAILED,
-        });
+        const failureReasonPromise = [
+          meetingsServices.updateMeetingStatus({
+            meetingId,
+            status: MeetingStatus.FAILED,
+          }),
+          meetingsServices.updateMeeting({ meetingId, failureReason }),
+        ];
+
+        await Promise.all(failureReasonPromise);
       },
     };
 
     const transcriptSegment: TranscriptSegment[] | undefined =
       await transcriptService.getAllTranscriptSegmentByMeetingId(meetingId);
 
+    let executionContext: ExecutionContext = {
+      meetingId: meetingId,
+      currentDateTime: new Date().toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    const executionOrchestrator = new ExecutionOrchestrate();
     if (transcriptSegment && transcriptSegment.length) {
-      let executionContext: ExecutionContext = {
-        meetingId: meetingId,
-        currentDateTime: new Date().toISOString(),
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      };
-
-      const executionOrchestrator = new ExecutionOrchestrate();
-
       // Starting the workflow
-      await meetingsServices.updateMeetingStatus({
-        meetingId,
-        status: "WORKFLOW_STARTED",
-      });
-      await executionOrchestrator.run({
-        context: executionContext,
-        transcriptSegments: transcriptSegment,
-        onCallbacks,
-      });
+      // TEST
+      // await meetingsServices.updateMeetingStatus({
+      //   meetingId,
+      //   status: "WORKFLOW_STARTED",
+      // });
     }
+    await executionOrchestrator.run({
+      context: executionContext,
+      transcriptSegments: transcriptSegment || [],
+      onCallbacks,
+    });
   } catch (error) {
     await meetingsServices.updateMeetingStatus({
       meetingId,

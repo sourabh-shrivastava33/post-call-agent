@@ -1,15 +1,14 @@
 const ActionItemsAgentConstants = {
   name: "Action Items Finding Agent",
-  model: "gpt-5-nano",
+  model: "gpt-4o",
 
   modelSettings: {
-    reasoning: { effort: "minimal" },
-    text: {
-      verbosity: "low",
-    },
+    temperature: 0.2,
+    top_p: 0.95,
+    max_tokens: 2000,
   },
 
-  confidenceThreshold: 0.7,
+  confidenceThreshold: 0.5,
 };
 
 export default ActionItemsAgentConstants;

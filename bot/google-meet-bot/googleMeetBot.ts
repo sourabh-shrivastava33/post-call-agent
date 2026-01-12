@@ -124,29 +124,49 @@ class GoogleMeetBot {
   }
 
   async sendConfirmationInChat(message: string) {
-    if (!this.page) return;
+    if (!this.page || !message) return;
+
+    const page = this.page;
+
     try {
-      const chatTextArea = this.page.getByRole("textbox", {
-        name: /send a message/i,
-      });
+      // 2️⃣ Explicitly click Chat button
+      const chatButton = page.locator('button[aria-label*="Chat"]');
 
-      const sendMessageButton = this.page.getByRole("button", {
-        name: /send a message/i,
-      });
-      const isChatTextAreaVisible = await chatTextArea.isVisible();
-      const isSendBtnVisible = await sendMessageButton.isVisible();
-
-      if (isChatTextAreaVisible && isSendBtnVisible && message) {
-        chatTextArea.click();
-        chatTextArea.fill(message);
-        sendMessageButton.click();
+      if (await chatButton.isVisible()) {
+        await chatButton.click({ force: true });
+        await page.waitForTimeout(800);
       }
-    } catch (error) {
-      console.log(
-        "Error while sending the confirmation in the chat",
-        JSON.stringify(error)
+
+      // 3️⃣ Now wait for textarea AFTER opening chat
+      const chatTextarea = page.locator(
+        'textarea[aria-label="Send a message"]'
       );
-      return;
+
+      await chatTextarea.waitFor({
+        state: "visible",
+        timeout: 8000,
+      });
+
+      // 4️⃣ Focus textarea (hard focus)
+      await chatTextarea.click({ force: true });
+      await page.waitForTimeout(200);
+
+      // 5️⃣ Type like a human
+      await chatTextarea.type(message, { delay: 25 });
+
+      // 6️⃣ Allow Meet to enable send internally
+      await page.waitForTimeout(300);
+
+      // 7️⃣ Send via Enter
+      await page.keyboard.press("Enter");
+
+      // 8️⃣ Small confirmation delay
+      await page.waitForTimeout(500);
+    } catch (error) {
+      console.error(
+        "Google Meet chat send failed:",
+        error instanceof Error ? error.message : error
+      );
     }
   }
 
@@ -232,7 +252,7 @@ class GoogleMeetBot {
         console.log("⚠ Polling error, stopping:", err);
         clearInterval(pollInterval);
       }
-    }, 10_000);
+    }, 5_000);
 
     process.on("SIGINT", () => {
       clearInterval(pollInterval);

@@ -39,6 +39,20 @@ class MeetingsServices {
     }
   }
 
+  async updateMeeting(updateMeetingData: updateMeetingData) {
+    try {
+      await prisma.meeting.update({
+        where: { id: updateMeetingData.meetingId },
+        data: { failureReason: updateMeetingData.failureReason },
+      });
+    } catch (error) {
+      throw new Error(
+        `Error updating meeting: Error, ${
+          error instanceof Error ? error.message : JSON.stringify(error)
+        }`
+      );
+    }
+  }
   async createMeetingBotSession(meetingBotSessionData: {
     meetingId: string;
     browserSessionId: string;
@@ -120,4 +134,8 @@ class MeetingsServices {
   }
 }
 
+interface updateMeetingData {
+  failureReason: string;
+  meetingId: string;
+}
 export default new MeetingsServices();

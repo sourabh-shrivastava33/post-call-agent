@@ -30,7 +30,22 @@ class OrchestratorAgent extends BaseAgent {
       const agent = this.getAgent();
 
       const result = await this.runner.run(agent, transcriptSegmentString);
-      const parsed = OrchestratorOutputType.parse(result.finalOutput);
+
+      let finalOutput: any = result.finalOutput;
+      if (typeof finalOutput === "string") {
+        // Try to parse JSON output. Agents sometimes return stringified JSON
+        // or include JSON inside a markdown code block.
+        try {
+          finalOutput = JSON.parse(finalOutput);
+        } catch (err) {
+          const jsonBlockMatch = finalOutput.match(/```json\s*([\s\S]*?)```/i);
+          if (jsonBlockMatch && jsonBlockMatch[1]) {
+            finalOutput = JSON.parse(jsonBlockMatch[1]);
+          }
+        }
+      }
+
+      const parsed = OrchestratorOutputType.parse(finalOutput);
 
       return parsed;
     } catch (error) {

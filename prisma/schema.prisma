@@ -67,10 +67,8 @@ model ExecutionArtifact{
   type ExecutionArtifactType
   summary String
   owner String?
-  visibility VisibilityType
-  priority PriorityType
   dueDate DateTime?
-  confidence ConfidenceType
+  confidence Int
   createdAt DateTime @default(now())
   sourceStartTime DateTime
   sourceEndTime DateTime
@@ -112,10 +110,6 @@ RISK
 DECISION
 }
 
-enum VisibilityType{
-  INTERNAL
-  CLIENT
-}
 
 enum ConfidenceType{
   HIGH 
@@ -133,8 +127,3 @@ WORKFLOW_ENDED
   FAILED
 }
 
-enum PriorityType{
-  HIGH
-  MEDIUM
-  LOW
-}

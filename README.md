@@ -178,7 +178,7 @@ The server will start on `http://localhost:8000`
 **ExecutionArtifact**
 
 - Stores extracted action items, decisions, and summaries
-- Includes priority, visibility, and confidence levels
+- Includes confidence levels
 
 **CaptionEvent**
 
@@ -234,10 +234,6 @@ ISC
 ## 👤 Author
 
 Sourabh Shrivastava
-
-
-
-
 
 For issues and questions, please open an issue on GitHub.
 
