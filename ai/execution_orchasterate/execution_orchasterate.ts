@@ -4,7 +4,20 @@ import { logger } from "../../shared/logger";
 import OrchestratorAgent from "../agents/orchestrator_agent";
 import { SourceType, TranscriptSegment } from "../../generated/prisma";
 import ActionItemsAgent from "../agents/action__items_agents";
-import { ActionItem } from "../agents/action__items_agents/action_items_agent_types";
+import {
+  ActionItemAdd,
+  ActionItemsAgentOutputType,
+} from "../agents/action__items_agents/action_items_agent_types";
+import BlockersAgent from "../agents/blocker_items_agent";
+import {
+  Blocker,
+  BlockersAgentOutput,
+} from "../agents/blocker_items_agent/blocker_items_agent.types";
+import ReconciliationAgent from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent";
+import { ReconciliationsAgentOutputInterface } from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent/reconciliation_agent.type";
+import ExecutionOrchestrateServices from "./excution_orchasterator.services";
+import ActionItemsAgentConstants from "../agents/action__items_agents/constants";
+import BlockerItemsAgentConstants from "../agents/blocker_items_agent/contants";
 
 interface OrchestratorRunParams {
   context: ExecutionContext;
@@ -18,10 +31,14 @@ interface OrchestratorRunParams {
 class ExecutionOrchestrate {
   private orchestrator: OrchestratorAgent;
   private actionItemsAgent: ActionItemsAgent;
-  private actionItems: ActionItem[] = [];
+  private blockersAgent: BlockersAgent;
+  private actionItems: ActionItemAdd[] = [];
+  private blockers: Blocker[] = [];
+  private executionServices: ExecutionOrchestrateServices | null = null;
   constructor() {
     this.orchestrator = new OrchestratorAgent();
     this.actionItemsAgent = new ActionItemsAgent();
+    this.blockersAgent = new BlockersAgent();
   }
   async run({
     context,
@@ -34,6 +51,7 @@ class ExecutionOrchestrate {
       );
 
       const orchestratorAgent = this.orchestrator;
+
       const transcriptString = this.getTranscriptString(transcriptSegments);
 
       const {
@@ -44,18 +62,41 @@ class ExecutionOrchestrate {
       const isAnyAgentCalled = call_action_items_agent || call_blockers_agent;
 
       if (!isAnyAgentCalled) return;
+      let agentRunPromise = [];
+      if (call_action_items_agent)
+        agentRunPromise.push(
+          this.actionItemsAgent.analyzeTranscript(transcriptString, context)
+        );
+      if (call_blockers_agent)
+        agentRunPromise.push(
+          this.blockersAgent.analyzeTranscript(transcriptString, context)
+        );
 
-      if (call_action_items_agent) {
-        const { action_items } = await this.actionItemsAgent.analyzeTranscript(
-          transcriptString,
-          context
-        );
-        logger.log(
-          `Extracted ${action_items.length} action items for the meeting with ID ${context.meetingId}`
-        );
-        this.actionItems = action_items;
-        console.log(this.actionItems);
+      const [actionItemsResult, blockersResult] = await Promise.all(
+        agentRunPromise
+      );
+      let persistObj: Record<string, any> = {};
+      if (
+        (actionItemsResult?.action_items.add.length ||
+          actionItemsResult?.action_items.update.length) &&
+        actionItemsResult.confidence >=
+          ActionItemsAgentConstants.confidenceThreshold
+      ) {
+        persistObj["actionItems"] = actionItemsResult.action_items;
       }
+      if (
+        (blockersResult?.blockers.add.length ||
+          blockersResult?.blockers.update.length) &&
+        blockersResult.confidence >=
+          BlockerItemsAgentConstants.confidenceThreshold
+      ) {
+        persistObj["blockers"] = blockersResult.blockers;
+      }
+
+      this.executionServices = new ExecutionOrchestrateServices(
+        context.meetingId
+      );
+      await this.executionServices.persistExecutionResults(persistObj);
     } catch (error) {
       const failureReason =
         error instanceof Error ? error.message : JSON.stringify(error);
@@ -65,10 +106,13 @@ class ExecutionOrchestrate {
   }
 
   getTranscriptString(transcriptSegments: TranscriptSegment[]): string {
-    if (!transcriptSegments || !transcriptSegments.length) return "";
+    if (!transcriptSegments || !transcriptSegments.length)
+      throw new Error("No transcript segments provided");
 
     return transcriptSegments.reduce((acc, curr) => {
-      return (acc = `${acc} ${curr.speaker}: ${curr.text}`);
+      return (acc = `${acc} ${curr.speaker}: ${
+        curr.text
+      } (start: ${curr.startTime.toISOString()}, end: ${curr.endTime.toISOString()})\n`);
     }, "");
   }
 }

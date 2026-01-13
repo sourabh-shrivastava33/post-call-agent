@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import meetingsServices from "./meetings.services.js";
 import OrchestratorAgent from "../../ai/agents/orchestrator_agent";
+import startExecution from "../../ai/start_execution.js";
 
 class MeetingsController {
   constructor() {}
@@ -24,4 +25,5 @@ class MeetingsController {
   }
 }
 
+const start = await startExecution("cmjmx5owo00001glb6d0irc6xr");
 export default new MeetingsController();

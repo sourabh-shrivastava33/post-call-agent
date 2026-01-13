@@ -1,7 +1,6 @@
 import { MeetingStatus, TranscriptSegment } from "../generated/prisma";
 import meetingsServices from "../models/meetings/meetings.services";
 import TranscriptServices from "../transcript/transcript.services";
-import { ActionItemsAgentOutput } from "./agents/action__items_agents/action_items_agent_types";
 import { ExecutionContext } from "./execution_orchasterate/execution_context";
 import ExecutionOrchestrate from "./execution_orchasterate/execution_orchasterate";
 
@@ -23,10 +22,15 @@ async function startExecution(meetingId: string): Promise<void> {
         });
       },
       onWorkflowFailed: async (failureReason: string) => {
-        await meetingsServices.updateMeetingStatus({
-          meetingId,
-          status: MeetingStatus.FAILED,
-        });
+        const failureReasonPromise = [
+          meetingsServices.updateMeetingStatus({
+            meetingId,
+            status: MeetingStatus.FAILED,
+          }),
+          meetingsServices.updateMeeting({ meetingId, failureReason }),
+        ];
+
+        await Promise.all(failureReasonPromise);
       },
     };
 
@@ -39,17 +43,16 @@ async function startExecution(meetingId: string): Promise<void> {
         currentDateTime: new Date().toISOString(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       };
-
       const executionOrchestrator = new ExecutionOrchestrate();
-
       // Starting the workflow
+      // TEST
       await meetingsServices.updateMeetingStatus({
         meetingId,
         status: "WORKFLOW_STARTED",
       });
       await executionOrchestrator.run({
         context: executionContext,
-        transcriptSegments: transcriptSegment,
+        transcriptSegments: transcriptSegment || [],
         onCallbacks,
       });
     }

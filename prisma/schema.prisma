@@ -65,12 +65,12 @@ model ExecutionArtifact{
   id String @id @default(cuid())
   meetingId String 
   type ExecutionArtifactType
+  title String
   summary String
   owner String?
-  visibility VisibilityType
-  priority PriorityType
   dueDate DateTime?
-  confidence ConfidenceType
+  externalId String?
+  confidence Int
   createdAt DateTime @default(now())
   sourceStartTime DateTime
   sourceEndTime DateTime
@@ -78,6 +78,7 @@ model ExecutionArtifact{
    meeting Meeting @relation(fields: [meetingId],references: [id])
 
    @@index([meetingId])
+  @@index([externalId])
 }
 
 
@@ -112,10 +113,6 @@ RISK
 DECISION
 }
 
-enum VisibilityType{
-  INTERNAL
-  CLIENT
-}
 
 enum ConfidenceType{
   HIGH 
@@ -133,8 +130,3 @@ WORKFLOW_ENDED
   FAILED
 }
 
-enum PriorityType{
-  HIGH
-  MEDIUM
-  LOW
-}

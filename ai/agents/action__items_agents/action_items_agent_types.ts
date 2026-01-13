@@ -1,22 +1,26 @@
 import { z } from "zod";
 
 /**
- * Single action item schema
+ * New action item to be created
  */
-export const ActionItemSchema = z.object({
-  title: z.string().min(1),
+export const ActionItem = z.object({
+  summary: z.string().min(1),
   owner: z.string().nullable(),
-  deadline: z.string().nullable(), // ISO Date: YYYY-MM-DD
+  dueDate: z.string().nullable(),
   confidence: z.number().min(0).max(1),
   source: z.string().min(1),
+  sourceStartTime: z.string().min(1),
+  sourceEndTime: z.string().min(1),
 });
 
 /**
- * Agent output schema
+ * Final Action Items Agent Output
  */
 export const ActionItemsAgentOutputType = z.object({
-  action_items: z.array(ActionItemSchema),
+  action_items: z.array(ActionItem),
+  confidence: z.number().min(0).max(1),
+  warnings: z.array(z.string()),
 });
 
-export type ActionItem = z.infer<typeof ActionItemSchema>;
+export type ActionItemAdd = z.infer<typeof ActionItem>;
 export type ActionItemsAgentOutput = z.infer<typeof ActionItemsAgentOutputType>;

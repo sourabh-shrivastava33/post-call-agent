@@ -14,6 +14,7 @@ class TranscriptProcessor {
   async processTranscript() {
     try {
       this.rawCaptionData = await this.fetchRawEventData();
+      if (this.rawCaptionData.length === 0) return;
       // Resolving speakers
       const resolvedSpeakerRawData = this.resolveSpeaker(this.rawCaptionData);
 

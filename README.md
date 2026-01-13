@@ -11,6 +11,20 @@ Post-Call Agent is an intelligent meeting intelligence platform that:
 - **Extracts** actionable artifacts including action items, decisions, and summary points
 - **Stores** all processed data in a PostgreSQL database for further analysis
 
+## ⚠️ Project Status
+
+This repository is a personal project maintained by the author and is not currently open for external contributions. The codebase is being developed as a potential commercial service offering for agencies — if you are interested in licensing, partnership, or agency services built on this project, please contact the author (Sourabh Shrivastava) for commercial enquiries.
+
+If you are exploring the code privately, you may fork it for your own internal use, but please do not submit pull requests to this repository at this time.
+
+### Contact / Commercial enquiries
+
+If you'd like to discuss licensing or agency services built on this project, contact the author:
+
+- **Sourabh Shrivastava** — please provide preferred contact (email or business URL) and I'll add it here.
+
+For now add your contact info by replacing the line above or tell me the email/URL and I'll update the README.
+
 ## ✨ Key Features
 
 - **Automated Meeting Capture**: Deploys Playwright-based bots to join and monitor Google Meet sessions
@@ -178,7 +192,7 @@ The server will start on `http://localhost:8000`
 **ExecutionArtifact**
 
 - Stores extracted action items, decisions, and summaries
-- Includes priority, visibility, and confidence levels
+- Includes confidence levels
 
 **CaptionEvent**
 
@@ -235,12 +249,69 @@ ISC
 
 Sourabh Shrivastava
 
-
-
-
-
 For issues and questions, please open an issue on GitHub.
 
 ---
 
 **Status**: The application is currently in development. Core data processing from raw caption to structured transcript is functional.
+
+## 🛠️ Recent Work (what we implemented)
+
+These notes document the important changes, reasoning, and handling improvements made while developing the extraction + reconciliation pipeline. They are intended to help maintainers, reviewers, and future contributors understand key decisions and operational steps.
+
+- **Robust orchestrator parsing**: the orchestrator now safely handles stringified JSON and JSON inside code blocks returned by LLM agents. This prevents Zod parse failures when an agent returns a JSON payload as a string.
+
+- **Extraction ↔ Reconciliation parity**: the `ActionItemsAgent` and `BlockersAgent` behavior was aligned — both produce consistent handoff payloads, include retry logic, and provide the original extractor handoff input for safe fallback when reconciliation declines to add items.
+
+- **Reconciliation fallback**: if a reconciliation agent (safety/conservative) returns `no_safe_actions`, the orchestrator now falls back to persisting the original extracted items so the pipeline doesn't drop valuable suggestions silently.
+
+- **Timestamps enrichment**: when extracted artifacts do not include `sourceStartTime` / `sourceEndTime`, the orchestrator attempts to match the artifact `source` text against transcript segments and attach `sourceStartTime`/`sourceEndTime` ranges to improve traceability.
+
+- **Deterministic model settings**: model parameter sets were harmonized (removed unsupported sampling params for gpt-5-\* models and fixed `reasoning.effort` allowed values) to avoid OpenAI API errors and reduce nondeterministic behavior.
+
+- **Persistence improvements**: action items and blockers are persisted with `externalId` values. When missing, a UUID is generated at create-time and stored in the DB. This `externalId` will be used as the canonical external mapping key (e.g., Notion row id).
+
+- **Bulk create/update + defensive checks**: services for blockers and action items support bulk `createMany` and `updateMany`. Both services now check that the referenced meeting exists before attempting to write artifacts to avoid foreign-key failures.
+
+- **Prisma schema change**: `ExecutionArtifact` received an optional `externalId` field (indexed) to map DB rows to external systems (Notion). Run the migration locally to apply it.
+
+## ✅ How to apply DB changes locally
+
+After pulling the latest code, run the Prisma migration and regenerate the client:
+
+```bash
+npx prisma migrate dev --name add-externalId-executionArtifact
+npx prisma generate
+```
+
+If you don't have an existing `meeting` record when the orchestrator tries to persist artifacts, the services will log and throw an explanatory error. Either ensure a meeting record exists or ask me to add automatic meeting creation.
+
+## 🧭 Using `externalId` for Notion (planned flow)
+
+- On create: the service generates a UUID `externalId` if not provided, stores it in `ExecutionArtifact.externalId`, then the Notion sync service can create a Notion row and update Notion metadata using that `externalId` as the canonical id.
+- On update: the Notion sync looks up the artifact by `externalId` and updates the matching Notion row.
+
+## 📷 Architecture diagram
+
+The architecture diagram helps visualize the agentic pipeline (orchestrator → extraction agents → reconciliation → DB → follow-up). Place the architecture image file you received into the repo at `docs/architecture.png` and it will render here in the README.
+
+![Post-Call Execution Intelligence (Agentic Architecture)](docs/architecture.png)
+
+If you want me to place the exact image attachment into the repo, upload or copy the file to `docs/architecture.png` (I can also add it if you provide the image file). The README references `docs/architecture.png` so any viewer will see it on GitHub or locally if the file exists.
+
+## 🔁 Quick dev checklist (after pulling changes)
+
+1. Install deps: `npm install`
+2. Apply DB migration: `npx prisma migrate dev --name add-externalId-executionArtifact`
+3. Generate Prisma client: `npx prisma generate`
+4. Type-check: `npx tsc --noEmit`
+5. Run: `npx tsx ./src/index.js`
+
+---
+
+If you'd like, I can also:
+
+- add an automated step that creates a meeting record when missing (queue artifacts until meeting exists), or
+- scaffold the Notion sync service that uses `externalId` as the Notion row id and writes back the Notion id into `externalId` on create.
+
+Tell me which of those you'd like next.

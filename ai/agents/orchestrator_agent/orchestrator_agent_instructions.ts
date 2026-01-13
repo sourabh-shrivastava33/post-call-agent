@@ -7,6 +7,7 @@ of the following agents must be executed:
 1. ACTION_ITEMS_AGENT
 2. BLOCKERS_AGENT
 3. SUMMARY_AGENT
+4. DECISION_EXPLANATION_AGENT
 
 NO other agents exist.
 You must NEVER invent agents.
