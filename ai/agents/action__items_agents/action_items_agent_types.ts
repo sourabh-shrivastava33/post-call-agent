@@ -9,6 +9,8 @@ export const ActionItem = z.object({
   dueDate: z.string().nullable(),
   confidence: z.number().min(0).max(1),
   source: z.string().min(1),
+  sourceStartTime: z.string().min(1),
+  sourceEndTime: z.string().min(1),
 });
 
 /**

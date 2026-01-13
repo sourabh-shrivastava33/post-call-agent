@@ -39,6 +39,17 @@ Return an empty list if no action items exist.
       const actionItems =
         await actionItemsService.getAllActionItemsByMeetingId();
 
+      // Debug: log how many existing action items were returned for reconciliation
+      try {
+        console.log(
+          `fetchOpenActionItems: found ${
+            (actionItems || []).length
+          } existing action items for meeting ${runContext?.context?.meetingId}`
+        );
+      } catch (e) {
+        /* ignore logging errors */
+      }
+
       return { existing_action_items: actionItems || [] };
     } catch {
       return { existing_action_items: [] };

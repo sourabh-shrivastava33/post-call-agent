@@ -1,46 +1,140 @@
 import { prisma } from "../../config/prisma";
-import { UpdateActionItemsInterface } from "./ai_services.types";
+import { randomUUID } from "crypto";
+import {} from "@prisma/client";
+import { ExecutionArtifactType } from "../../generated/prisma";
+
+interface UpdateActionItemsInterface {
+  id: string;
+  title?: string;
+  type: ExecutionArtifactType;
+  summary?: string;
+  owner?: string | null;
+  dueDate?: string | null; // YYYY-MM-DD
+  confidence?: number; // 0.0 - 1.0
+  externalId?: string | null;
+}
+interface CreateActionItemsInterface {
+  title: string;
+  type: ExecutionArtifactType;
+  summary: string;
+  owner: string | null;
+  dueDate: string | null; // YYYY-MM-DD
+  confidence: number; // 0.0 - 1.0
+  sourceStartTime: string;
+  sourceEndTime: string;
+  externalId?: string | null;
+}
 
 class ActionItemsServices {
   private meetingId: string;
+
   constructor(meetingId: string) {
     this.meetingId = meetingId;
   }
+
+  /**
+   * Fetch ONLY action items for this meeting
+   */
   async getAllActionItemsByMeetingId() {
     try {
-      const action_items = await prisma.executionArtifact.findMany({
-        where: { meetingId: this.meetingId },
+      return await prisma.executionArtifact.findMany({
+        where: {
+          meetingId: this.meetingId,
+          type: ExecutionArtifactType.ACTION,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
       });
-      return action_items;
     } catch (error) {
-      console.log("Error while fetching all the action items");
+      console.error("Failed to fetch action items", error);
+      return [];
     }
   }
 
-  async updateActionItems({
-    id,
-    dueDate,
-    owner,
-    confidence,
-  }: UpdateActionItemsInterface) {
-    let updateData: Partial<UpdateActionItemsInterface> = {};
-    if (dueDate !== undefined) {
-      updateData.dueDate = dueDate;
-    }
-    if (owner !== undefined) {
-      updateData.owner = owner;
-    }
+  async createAllActionItems(
+    createActionItemsData: CreateActionItemsInterface[]
+  ) {
+    try {
+      const meeting = await prisma.meeting.findUnique({
+        where: { id: this.meetingId },
+      });
+      if (!meeting) {
+        console.error(
+          `Cannot create action items: meeting ${this.meetingId} not found`
+        );
+        throw new Error(`Meeting not found: ${this.meetingId}`);
+      }
+      await prisma.executionArtifact.createMany({
+        data: createActionItemsData.map((item) => {
+          const data: any = {
+            meetingId: this.meetingId,
+            type: ExecutionArtifactType.ACTION,
+            title: item.title || item.summary,
+            summary: item.summary,
+            owner: item.owner,
+            externalId: item.externalId || randomUUID(),
+            confidence: Math.round(item.confidence * 100),
+          };
 
-    if (confidence !== undefined) {
-      updateData.confidence = confidence;
+          if (item.dueDate) {
+            data.dueDate = new Date(item.dueDate);
+          } else if (item.dueDate === null) {
+            data.dueDate = null;
+          }
+
+          if (item.sourceStartTime)
+            data.sourceStartTime = new Date(item.sourceStartTime);
+          if (item.sourceEndTime)
+            data.sourceEndTime = new Date(item.sourceEndTime);
+
+          return data;
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to create action items", error);
+      throw error;
     }
+  }
+
+  /**
+   * Update an existing action item safely
+   */
+  async updateAllActionItems(
+    updateActionItemsData: UpdateActionItemsInterface[]
+  ) {
+    let updatePayload = updateActionItemsData.map((item) => {
+      const updateData: any = {};
+
+      if (item.summary !== undefined) {
+        updateData.summary = item.summary;
+      }
+
+      if (item.owner !== undefined) {
+        updateData.owner = item.owner;
+      }
+
+      if (item.dueDate !== undefined) {
+        updateData.dueDate = item.dueDate ? new Date(item.dueDate) : null;
+      }
+
+      if (item.confidence !== undefined) {
+        // Convert 0–1 → 0–100
+        updateData.confidence = Math.round(item.confidence * 100);
+      }
+      return {
+        where: { id: item.id },
+        data: updateData,
+      };
+    });
 
     try {
-      await prisma.executionArtifact.update({
-        where: { id: id },
-        data: { ...updateData },
+      await prisma.executionArtifact.updateMany({
+        data: updatePayload,
       });
-    } catch (error) {}
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

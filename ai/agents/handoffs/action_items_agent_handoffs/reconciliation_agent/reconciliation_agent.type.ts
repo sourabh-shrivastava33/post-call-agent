@@ -9,6 +9,8 @@ export const ReconciliationAddSchema = z.object({
   dueDate: z.string().nullable(), // YYYY-MM-DD
   confidence: z.number().min(0).max(1),
   source: z.string().min(1),
+  sourceStartTime: z.string().min(1),
+  sourceEndTime: z.string().min(1),
 });
 
 /**

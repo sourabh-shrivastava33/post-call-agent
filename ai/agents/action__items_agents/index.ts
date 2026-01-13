@@ -16,6 +16,7 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
   private runner: Runner;
   private handoffCalled: boolean = false;
   private reconciliationOutput: any = null;
+  private handoffInput: any = null;
 
   constructor() {
     const reconciliationAgent = new ReconciliationAgent();
@@ -40,6 +41,7 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
               `  Action items count: ${input?.action_items?.length || 0}`
             );
             this.handoffCalled = true;
+            this.handoffInput = input;
           },
         }),
       ]
@@ -62,12 +64,17 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
     return this.reconciliationOutput;
   }
 
+  getHandoffInput(): any {
+    return this.handoffInput;
+  }
+
   /**
    * Reset flags for next execution
    */
   resetHandoffFlag(): void {
     this.handoffCalled = false;
     this.reconciliationOutput = null;
+    this.handoffInput = null;
   }
 
   async analyzeTranscript(

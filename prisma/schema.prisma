@@ -65,9 +65,11 @@ model ExecutionArtifact{
   id String @id @default(cuid())
   meetingId String 
   type ExecutionArtifactType
+  title String
   summary String
   owner String?
   dueDate DateTime?
+  externalId String?
   confidence Int
   createdAt DateTime @default(now())
   sourceStartTime DateTime
@@ -76,6 +78,7 @@ model ExecutionArtifact{
    meeting Meeting @relation(fields: [meetingId],references: [id])
 
    @@index([meetingId])
+  @@index([externalId])
 }
 
 

@@ -6,6 +6,8 @@ export const BlockerSchema = z.object({
   owner: z.string().min(1).max(100).nullable(),
   confidence: z.number().min(0).max(1),
   source: z.string().min(10),
+  sourceStartTime: z.string().min(1),
+  sourceEndTime: z.string().min(1),
 });
 
 export const BlockersAgentOutputSchema = z.object({

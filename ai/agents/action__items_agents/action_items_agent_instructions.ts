@@ -172,6 +172,8 @@ Use the transfer_to_Reconciliation_Agent function with this structure:
       "dueDate": "YYYY-MM-DD | null",
       "confidence": number,
       "source": "string"
+      "sourceStartTime":"ISO string",
+      "sourceEndTime":"ISO string"
     }
   ],
   "confidence": number,

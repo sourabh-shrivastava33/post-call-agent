@@ -25,7 +25,9 @@ a) action_items
    - dueDate (nullable)
    - confidence
    - source
-   
+   -sourceStartTime
+   -sourceEndTime
+
    These items do NOT contain database IDs.
 
 b) confidence
@@ -52,6 +54,9 @@ Each item contains:
 - owner
 - dueDate
 - confidence
+- source
+- sourceStartTime
+- sourceEndTime
 
 The database output is the only source of truth for identity.
 
@@ -179,7 +184,9 @@ Schema:
         "owner": "string | null",
         "dueDate": "YYYY-MM-DD | null",
         "confidence": number,
-        "source": "string"
+        "source": "string",
+        "sourceStartTime":"ISO string",
+        "sourceEndTime":"ISO string"
       }
     ],
     "update": [
@@ -224,7 +231,7 @@ EXAMPLE WORKFLOW
 {
   "action_items": {
     "add": [
-      {"summary": "Finalize roles", "owner": "Amit", "dueDate": null, "confidence": 0.9, "source": "..."}
+      {"summary": "Finalize roles", "owner": "Amit", "dueDate": null, "confidence": 0.9, "source": "...",sourceStartTime:"2024-01-01T10:00:00.000Z",sourceEndTime:"2024-01-01T10:05:00.000Z"}
     ],
     "update": []
   },

@@ -4,12 +4,20 @@ import { logger } from "../../shared/logger";
 import OrchestratorAgent from "../agents/orchestrator_agent";
 import { SourceType, TranscriptSegment } from "../../generated/prisma";
 import ActionItemsAgent from "../agents/action__items_agents";
-import { ActionItemAdd } from "../agents/action__items_agents/action_items_agent_types";
+import {
+  ActionItemAdd,
+  ActionItemsAgentOutputType,
+} from "../agents/action__items_agents/action_items_agent_types";
 import BlockersAgent from "../agents/blocker_items_agent";
 import {
   Blocker,
   BlockersAgentOutput,
 } from "../agents/blocker_items_agent/blocker_items_agent.types";
+import ReconciliationAgent from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent";
+import { ReconciliationsAgentOutputInterface } from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent/reconciliation_agent.type";
+import ExecutionOrchestrateServices from "./excution_orchasterator.services";
+import ActionItemsAgentConstants from "../agents/action__items_agents/constants";
+import BlockerItemsAgentConstants from "../agents/blocker_items_agent/contants";
 
 interface OrchestratorRunParams {
   context: ExecutionContext;
@@ -26,6 +34,7 @@ class ExecutionOrchestrate {
   private blockersAgent: BlockersAgent;
   private actionItems: ActionItemAdd[] = [];
   private blockers: Blocker[] = [];
+  private executionServices: ExecutionOrchestrateServices | null = null;
   constructor() {
     this.orchestrator = new OrchestratorAgent();
     this.actionItemsAgent = new ActionItemsAgent();
@@ -43,98 +52,7 @@ class ExecutionOrchestrate {
 
       const orchestratorAgent = this.orchestrator;
 
-      let testData: TranscriptSegment[] = [
-        {
-          id: "seg_1",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:00:05.000Z"),
-          endTime: new Date("2026-01-03T10:00:12.000Z"),
-          speaker: "Amit (PM)",
-          text: "Alright, let's start. The main goal today is to finalize the onboarding flow for the new agency dashboard.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:00:12.000Z"),
-          updatedAt: new Date("2026-01-03T10:00:12.000Z"),
-        },
-        {
-          id: "seg_2",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:00:15.000Z"),
-          endTime: new Date("2026-01-03T10:00:22.000Z"),
-          speaker: "Riya (Design)",
-          text: "From a design perspective, we are still waiting on the final copy for the empty states.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:00:22.000Z"),
-          updatedAt: new Date("2026-01-03T10:00:22.000Z"),
-        },
-        {
-          id: "seg_3",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:00:25.000Z"),
-          endTime: new Date("2026-01-03T10:00:35.000Z"),
-          speaker: "Sourabh (Backend)",
-          text: "Backend APIs for user creation and permissions are already done. The blocker is that role definitions are still not finalized.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:00:35.000Z"),
-          updatedAt: new Date("2026-01-03T10:00:35.000Z"),
-        },
-        {
-          id: "seg_4",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:00:38.000Z"),
-          endTime: new Date("2026-01-03T10:00:46.000Z"),
-          speaker: "Amit (PM)",
-          text: "Okay, action item for me is to finalize the role definitions by tomorrow end of day.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:00:46.000Z"),
-          updatedAt: new Date("2026-01-03T10:00:46.000Z"),
-        },
-        {
-          id: "seg_5",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:00:50.000Z"),
-          endTime: new Date("2026-01-03T10:00:58.000Z"),
-          speaker: "Riya (Design)",
-          text: "Once roles are finalized, I can finish the empty state designs on the same day.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:00:58.000Z"),
-          updatedAt: new Date("2026-01-03T10:00:58.000Z"),
-        },
-        {
-          id: "seg_6",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:01:02.000Z"),
-          endTime: new Date("2026-01-03T10:01:10.000Z"),
-          speaker: "Amit (PM)",
-          text: "One more thing, QA has not tested the new onboarding flow yet, so this might delay the release.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:01:10.000Z"),
-          updatedAt: new Date("2026-01-03T10:01:10.000Z"),
-        },
-        {
-          id: "seg_7",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:01:13.000Z"),
-          endTime: new Date("2026-01-03T10:01:20.000Z"),
-          speaker: "Sourabh (Backend)",
-          text: "Yes, QA testing is a blocker. Without that, we should not push this to production.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:01:20.000Z"),
-          updatedAt: new Date("2026-01-03T10:01:20.000Z"),
-        },
-        {
-          id: "seg_8",
-          meetingId: "meeting_123",
-          startTime: new Date("2026-01-03T10:01:25.000Z"),
-          endTime: new Date("2026-01-03T10:01:32.000Z"),
-          speaker: "Amit (PM)",
-          text: "Alright, let's tentatively target Friday for release assuming QA clears everything.",
-          source: SourceType.CAPTION,
-          createdAt: new Date("2026-01-03T10:01:32.000Z"),
-          updatedAt: new Date("2026-01-03T10:01:32.000Z"),
-        },
-      ];
-
-      const transcriptString = this.getTranscriptString(testData);
+      const transcriptString = this.getTranscriptString(transcriptSegments);
 
       const {
         call_action_items_agent,
@@ -157,16 +75,28 @@ class ExecutionOrchestrate {
       const [actionItemsResult, blockersResult] = await Promise.all(
         agentRunPromise
       );
+      let persistObj: Record<string, any> = {};
+      if (
+        (actionItemsResult?.action_items.add.length ||
+          actionItemsResult?.action_items.update.length) &&
+        actionItemsResult.confidence >=
+          ActionItemsAgentConstants.confidenceThreshold
+      ) {
+        persistObj["actionItems"] = actionItemsResult.action_items;
+      }
+      if (
+        (blockersResult?.blockers.add.length ||
+          blockersResult?.blockers.update.length) &&
+        blockersResult.confidence >=
+          BlockerItemsAgentConstants.confidenceThreshold
+      ) {
+        persistObj["blockers"] = blockersResult.blockers;
+      }
 
-      // Check if ReconciliationAgent was called via handoff
-      const reconciliationOutput =
-        this.actionItemsAgent.getReconciliationOutput?.();
-
-      console.log({
-        actionItemsResult,
-        blockersResult,
-        ...(reconciliationOutput && { reconciliationOutput }),
-      });
+      this.executionServices = new ExecutionOrchestrateServices(
+        context.meetingId
+      );
+      await this.executionServices.persistExecutionResults(persistObj);
     } catch (error) {
       const failureReason =
         error instanceof Error ? error.message : JSON.stringify(error);
@@ -180,7 +110,9 @@ class ExecutionOrchestrate {
       throw new Error("No transcript segments provided");
 
     return transcriptSegments.reduce((acc, curr) => {
-      return (acc = `${acc} ${curr.speaker}: ${curr.text}`);
+      return (acc = `${acc} ${curr.speaker}: ${
+        curr.text
+      } (start: ${curr.startTime.toISOString()}, end: ${curr.endTime.toISOString()})\n`);
     }, "");
   }
 }
