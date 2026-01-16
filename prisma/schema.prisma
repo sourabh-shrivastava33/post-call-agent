@@ -61,25 +61,29 @@ failureReason String?
 }
 
 
-model ExecutionArtifact{
-  id String @id @default(cuid())
-  meetingId String 
-  type ExecutionArtifactType
-  title String
-  summary String
-  owner String?
-  dueDate DateTime?
-  externalId String?
-  confidence Int
-  createdAt DateTime @default(now())
+model ExecutionArtifact {
+  id              String   @id @default(cuid())
+  meetingId       String
+  type            ExecutionArtifactType
+  title           String
+  summary         String
+  owner           String?
+  dueDate         DateTime?
+  confidence      Float
+  status          ExecutionArtifactStatus @default(PLANNED)
+  origin          ExecutionArtifactOrigin @default(DEFAULT)
+  externalId      String
   sourceStartTime DateTime
-  sourceEndTime DateTime
-  updatedAt DateTime @updatedAt
-   meeting Meeting @relation(fields: [meetingId],references: [id])
+  sourceEndTime   DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-   @@index([meetingId])
+  meeting         Meeting  @relation(fields: [meetingId], references: [id])
+
+  @@index([meetingId])
   @@index([externalId])
 }
+
 
 
 
@@ -101,11 +105,11 @@ model CaptionEvent {
   @@index([meetingId, sequenceNumber])
 }
 
-enum SourceType{
+enum SourceType {
   CAPTION
   STT
 }
-enum ExecutionArtifactType{
+enum ExecutionArtifactType {
 ACTION
 BLOCKER
 PENDING
@@ -114,13 +118,13 @@ DECISION
 }
 
 
-enum ConfidenceType{
+enum ConfidenceType {
   HIGH 
   MEDIUM 
   LOW
 
 }
-enum MeetingStatus{
+enum MeetingStatus {
   SCHEDULED
   JOINED
   CAPTURING
@@ -130,3 +134,16 @@ WORKFLOW_ENDED
   FAILED
 }
 
+enum ExecutionArtifactOrigin {
+  ACTION_ITEMS_AGENT
+  BLOCKER_AGENT
+  FOLLOW_UP_AGENT
+DEFAULT
+}
+
+enum ExecutionArtifactStatus {
+  PLANNED
+  CONFIRMED
+  BLOCKED
+  COMPLETED
+}

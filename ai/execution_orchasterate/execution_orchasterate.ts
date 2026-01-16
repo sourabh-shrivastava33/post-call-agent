@@ -1,23 +1,15 @@
-import { withTrace } from "@openai/agents";
 import { ExecutionContext } from "./execution_context";
 import { logger } from "../../shared/logger";
 import OrchestratorAgent from "../agents/orchestrator_agent";
-import { SourceType, TranscriptSegment } from "../../generated/prisma";
+import { TranscriptSegment } from "../../generated/prisma";
 import ActionItemsAgent from "../agents/action__items_agents";
-import {
-  ActionItemAdd,
-  ActionItemsAgentOutputType,
-} from "../agents/action__items_agents/action_items_agent_types";
+
 import BlockersAgent from "../agents/blocker_items_agent";
-import {
-  Blocker,
-  BlockersAgentOutput,
-} from "../agents/blocker_items_agent/blocker_items_agent.types";
-import ReconciliationAgent from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent";
-import { ReconciliationsAgentOutputInterface } from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent/reconciliation_agent.type";
+
 import ExecutionOrchestrateServices from "./excution_orchasterator.services";
 import ActionItemsAgentConstants from "../agents/action__items_agents/constants";
 import BlockerItemsAgentConstants from "../agents/blocker_items_agent/contants";
+import FollowUpOrchestrator from "../followup_orchestrate";
 
 interface OrchestratorRunParams {
   context: ExecutionContext;
@@ -32,9 +24,8 @@ class ExecutionOrchestrate {
   private orchestrator: OrchestratorAgent;
   private actionItemsAgent: ActionItemsAgent;
   private blockersAgent: BlockersAgent;
-  private actionItems: ActionItemAdd[] = [];
-  private blockers: Blocker[] = [];
   private executionServices: ExecutionOrchestrateServices | null = null;
+  private followupOrchestrator: FollowUpOrchestrator | null = null;
   constructor() {
     this.orchestrator = new OrchestratorAgent();
     this.actionItemsAgent = new ActionItemsAgent();
@@ -52,24 +43,30 @@ class ExecutionOrchestrate {
 
       const orchestratorAgent = this.orchestrator;
 
-      const transcriptString = this.getTranscriptString(transcriptSegments);
+      // const transcriptString = this.getTranscriptString(transcriptSegments);
 
       const {
         call_action_items_agent,
         call_blockers_agent,
-        call_summary_agent,
-      } = await orchestratorAgent.analyzeTranscript(transcriptString);
-      const isAnyAgentCalled = call_action_items_agent || call_blockers_agent;
+        call_followup_agent,
+        followupIntent,
+        to,
+        from,
+      } = await orchestratorAgent.analyzeTranscript(testString);
+      const isAnyAgentCalled =
+        call_action_items_agent ||
+        call_blockers_agent ||
+        (call_followup_agent && followupIntent);
 
       if (!isAnyAgentCalled) return;
       let agentRunPromise = [];
       if (call_action_items_agent)
         agentRunPromise.push(
-          this.actionItemsAgent.analyzeTranscript(transcriptString, context)
+          this.actionItemsAgent.runExecutionPipeline(testString, context)
         );
       if (call_blockers_agent)
         agentRunPromise.push(
-          this.blockersAgent.analyzeTranscript(transcriptString, context)
+          this.blockersAgent.runExecutionPipeline(testString, context)
         );
 
       const [actionItemsResult, blockersResult] = await Promise.all(
@@ -96,7 +93,14 @@ class ExecutionOrchestrate {
       this.executionServices = new ExecutionOrchestrateServices(
         context.meetingId
       );
+
       await this.executionServices.persistExecutionResults(persistObj);
+      const followupOrchestrate = new FollowUpOrchestrator(
+        actionItemsResult.action_items,
+        blockersResult.blockers,
+        followupIntent
+      );
+      await followupOrchestrate.run();
     } catch (error) {
       const failureReason =
         error instanceof Error ? error.message : JSON.stringify(error);
@@ -119,94 +123,47 @@ class ExecutionOrchestrate {
 
 export default ExecutionOrchestrate;
 
-// test data for local testing
-// let testData: TranscriptSegment[] = [
-//   {
-//     id: "seg_1",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:00:05.000Z"),
-//     endTime: new Date("2026-01-03T10:00:12.000Z"),
-//     speaker: "Amit (PM)",
-//     text: "Alright, let's start. The main goal today is to finalize the onboarding flow for the new agency dashboard.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:00:12.000Z"),
-//     updatedAt: new Date("2026-01-03T10:00:12.000Z"),
-//   },
-//   {
-//     id: "seg_2",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:00:15.000Z"),
-//     endTime: new Date("2026-01-03T10:00:22.000Z"),
-//     speaker: "Riya (Design)",
-//     text: "From a design perspective, we are still waiting on the final copy for the empty states.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:00:22.000Z"),
-//     updatedAt: new Date("2026-01-03T10:00:22.000Z"),
-//   },
-//   {
-//     id: "seg_3",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:00:25.000Z"),
-//     endTime: new Date("2026-01-03T10:00:35.000Z"),
-//     speaker: "Sourabh (Backend)",
-//     text: "Backend APIs for user creation and permissions are already done. The blocker is that role definitions are still not finalized.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:00:35.000Z"),
-//     updatedAt: new Date("2026-01-03T10:00:35.000Z"),
-//   },
-//   {
-//     id: "seg_4",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:00:38.000Z"),
-//     endTime: new Date("2026-01-03T10:00:46.000Z"),
-//     speaker: "Amit (PM)",
-//     text: "Okay, action item for me is to finalize the role definitions by tomorrow end of day.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:00:46.000Z"),
-//     updatedAt: new Date("2026-01-03T10:00:46.000Z"),
-//   },
-//   {
-//     id: "seg_5",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:00:50.000Z"),
-//     endTime: new Date("2026-01-03T10:00:58.000Z"),
-//     speaker: "Riya (Design)",
-//     text: "Once roles are finalized, I can finish the empty state designs on the same day.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:00:58.000Z"),
-//     updatedAt: new Date("2026-01-03T10:00:58.000Z"),
-//   },
-//   {
-//     id: "seg_6",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:01:02.000Z"),
-//     endTime: new Date("2026-01-03T10:01:10.000Z"),
-//     speaker: "Amit (PM)",
-//     text: "One more thing, QA has not tested the new onboarding flow yet, so this might delay the release.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:01:10.000Z"),
-//     updatedAt: new Date("2026-01-03T10:01:10.000Z"),
-//   },
-//   {
-//     id: "seg_7",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:01:13.000Z"),
-//     endTime: new Date("2026-01-03T10:01:20.000Z"),
-//     speaker: "Sourabh (Backend)",
-//     text: "Yes, QA testing is a blocker. Without that, we should not push this to production.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:01:20.000Z"),
-//     updatedAt: new Date("2026-01-03T10:01:20.000Z"),
-//   },
-//   {
-//     id: "seg_8",
-//     meetingId: "meeting_123",
-//     startTime: new Date("2026-01-03T10:01:25.000Z"),
-//     endTime: new Date("2026-01-03T10:01:32.000Z"),
-//     speaker: "Amit (PM)",
-//     text: "Alright, let's tentatively target Friday for release assuming QA clears everything.",
-//     source: SourceType.CAPTION,
-//     createdAt: new Date("2026-01-03T10:01:32.000Z"),
-//     updatedAt: new Date("2026-01-03T10:01:32.000Z"),
-//   },
-// ];
+let testString = `Alex (Agency – Senior Account Director): Thanks everyone for joining. Today’s goal is to review Q1 pipeline performance, confirm next steps, and align on follow-ups before finance decisions are finalized.
+
+Rachel (Client – CMO): Thanks Alex. Before we proceed, I want to be clear — leadership expects a written follow-up after this call with concrete next steps.
+
+Daniel (Agency – Growth Strategist): Understood. At a high level, pipeline volume is up 20% quarter over quarter, but win rate has dropped from 22% to 15%.
+
+Rachel (Client – CMO): That drop is concerning. I’ll need a follow-up explaining what actions we’re taking to improve revenue efficiency.
+
+Mike (Client – Head of Sales): From sales’ side, lead quality is inconsistent, especially from paid social. That’s blocking my team’s ability to close deals.
+
+Sophia (Agency – Paid Media Lead): That’s fair. Meta campaigns are currently driving low-intent traffic due to audience expansion changes.
+
+Mike (Client – Head of Sales): Until that’s fixed, SDR productivity will remain a blocker for us.
+
+Alex (Agency – Senior Account Director): Agreed. Action item on our side — tighten ICP targeting across paid social and pause low-intent Meta campaigns starting this week. Sophia will own execution.
+
+Sophia (Agency – Paid Media Lead): Confirmed. I’ll implement those changes by Wednesday.
+
+Rachel (Client – CMO): Good. I also want a follow-up that shows how tightening ICP impacts forecasted revenue, not just lead volume.
+
+Daniel (Agency – Growth Strategist): We’ll update the revenue forecast and include projected impact on pipeline and closed-won deals.
+
+Alex (Agency – Senior Account Director): Noted as an action item — revised revenue-based forecast by Friday.
+
+Rachel (Client – CMO): Another blocker is attribution. Finance is questioning whether paid media influences enterprise deals, and we don’t have clean multi-touch attribution.
+
+Sophia (Agency – Paid Media Lead): Correct. HubSpot and Salesforce multi-touch attribution is not fully implemented yet.
+
+Mike (Client – Head of Sales): Until attribution is fixed, budget approvals are at risk.
+
+Alex (Agency – Senior Account Director): Action item — we’ll audit the current attribution setup and document what’s missing to support multi-touch reporting.
+
+Rachel (Client – CMO): I’ll need that audit before my exec meeting next week.
+
+Rachel (Client – CMO): Please follow up with me by email after this call summarizing the agreed actions, blockers, and next steps.
+
+Rachel (Client – CMO): Send the follow-up to rachel@client.com today so I can review it with finance.
+
+Rachel (Client – CMO): One more question for the follow-up — can you confirm whether tightening ICP will reduce demo no-show rates?
+
+Alex (Agency – Senior Account Director): We’ll analyze historical data and include that clarification in the follow-up.
+
+Alex (Agency – Senior Account Director): Thanks everyone. We’ll proceed on the action items and send the follow-up as requested.
+`;

@@ -1,6 +1,6 @@
 const ReconciliationAgentConstants = {
   name: "Reconciliation Agent",
-  model: "gpt-5-nano",
+  model: "gpt-5-mini",
 
   // Reconciliation must be conservative and deterministic — very low temperature
   modelSettings: {
@@ -9,6 +9,7 @@ const ReconciliationAgentConstants = {
     text: {
       verbosity: "low",
     },
+    tool_choice: "required",
     max_tokens: 1500,
   },
 

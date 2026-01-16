@@ -43,7 +43,7 @@ class BlockersAgent extends BaseAgent<ExecutionContext> {
     this.runner = new Runner();
   }
 
-  async analyzeTranscript(
+  async runExecutionPipeline(
     transcript: string,
     context: ExecutionContext
   ): Promise<any> {

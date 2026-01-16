@@ -166,7 +166,7 @@ Use the transfer_to_Reconciliation_Agent function with this structure:
 
 {
   "action_items": [
-    {
+    { "title":"string"
       "summary": "string",
       "owner": "string | null",
       "dueDate": "YYYY-MM-DD | null",

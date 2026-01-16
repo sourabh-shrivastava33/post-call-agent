@@ -12,10 +12,10 @@ class ExecutionOrchestrateServices {
   }
   async persistExecutionResults(persistData: Record<string, any>) {
     const { actionItems, blockers } = persistData;
-    const actionAddPayload = actionItems.add || [];
-    const actionUpdatePayload = actionItems.update || [];
-    const blockerAddPayload = blockers.add || [];
-    const blockerUpdatePayload = blockers.update || [];
+    const actionAddPayload = actionItems?.add || [];
+    const actionUpdatePayload = actionItems?.update || [];
+    const blockerAddPayload = blockers?.add || [];
+    const blockerUpdatePayload = blockers?.update || [];
     try {
       if (actionAddPayload.length) {
         await this.actionItemsService.createAllActionItems(actionAddPayload);
@@ -29,6 +29,7 @@ class ExecutionOrchestrateServices {
       if (blockerUpdatePayload.length) {
         await this.blockersService.updateAllBlockers(blockerUpdatePayload);
       }
+      return;
     } catch (error) {
       throw new Error(
         "Error persisting execution results: " +

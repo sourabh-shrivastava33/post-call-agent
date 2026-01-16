@@ -23,10 +23,7 @@ Return an empty list if no action items exist.
   strict: true,
   parameters: z.object({}),
 
-  execute: async (
-    _args,
-    runContext?: RunContext<ExecutionContext>
-  ): Promise<{ existing_action_items: ExecutionArtifact[] }> => {
+  execute: async (_args, runContext?: RunContext<ExecutionContext>) => {
     try {
       if (!runContext?.context) {
         return { existing_action_items: [] };
@@ -36,8 +33,7 @@ Return an empty list if no action items exist.
       );
 
       //   return { iso_date: isoDate };
-      const actionItems =
-        await actionItemsService.getAllActionItemsByMeetingId();
+      const actionItems = await actionItemsService.getAllActionItems();
 
       // Debug: log how many existing action items were returned for reconciliation
       try {

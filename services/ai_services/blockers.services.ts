@@ -21,6 +21,7 @@ class BlockersService {
    */
   async createAllBlockers(
     createBlockersData: {
+      title: string;
       summary: string;
       owner: string | null;
       confidence: number;
@@ -39,25 +40,28 @@ class BlockersService {
         );
         throw new Error(`Meeting not found: ${this.meetingId}`);
       }
+
+      const blockersCreatePayload = createBlockersData.map((item) => {
+        const data: any = {
+          meetingId: this.meetingId,
+          type: ExecutionArtifactType.BLOCKER,
+          title: item.title,
+          summary: item.summary,
+          owner: item.owner,
+          confidence: Math.round(item.confidence * 100),
+          externalId: item.externalId || randomUUID(),
+        };
+        if (item.sourceStartTime) {
+          data.sourceStartTime = new Date(item.sourceStartTime);
+        }
+        if (item.sourceEndTime) {
+          data.sourceEndTime = new Date(item.sourceEndTime);
+        }
+        return data;
+      });
+
       await prisma.executionArtifact.createMany({
-        data: createBlockersData.map((item) => {
-          const data: any = {
-            meetingId: this.meetingId,
-            type: ExecutionArtifactType.BLOCKER,
-            title: item.summary,
-            summary: item.summary,
-            owner: item.owner,
-            confidence: Math.round(item.confidence * 100),
-            externalId: item.externalId || randomUUID(),
-          };
-          if (item.sourceStartTime) {
-            data.sourceStartTime = new Date(item.sourceStartTime);
-          }
-          if (item.sourceEndTime) {
-            data.sourceEndTime = new Date(item.sourceEndTime);
-          }
-          return data;
-        }),
+        data: blockersCreatePayload,
       });
     } catch (error) {
       console.error("Failed to create blockers", error);
@@ -77,24 +81,28 @@ class BlockersService {
       confidence?: number;
     }[]
   ) {
-    const updatePayload = updateBlockersData.map((item) => {
+    if (updateBlockersData.length === 0) return;
+
+    const operations = updateBlockersData.map((item) => {
       const updateData: any = {};
+
       if (item.summary !== undefined) updateData.summary = item.summary;
       if (item.owner !== undefined) updateData.owner = item.owner;
       if (item.title !== undefined) updateData.title = item.title;
-      if (item.confidence !== undefined)
-        updateData.confidence = Math.round(item.confidence * 100);
 
-      return {
+      if (item.confidence !== undefined) {
+        // Normalize 0–1 → 0–100 (DB format)
+        updateData.confidence = Math.round(item.confidence * 100);
+      }
+
+      return prisma.executionArtifact.update({
         where: { id: item.id },
         data: updateData,
-      };
+      });
     });
 
     try {
-      await prisma.executionArtifact.updateMany({
-        data: updatePayload,
-      });
+      await prisma.$transaction(operations);
     } catch (error) {
       console.error("Failed to update blockers", error);
       throw error;
@@ -104,15 +112,24 @@ class BlockersService {
   /**
    * Fetch ONLY blockers for this meeting
    */
-  async getAllOpenBlockersByMeetingId() {
+  async getAllBlockers() {
     try {
       return await prisma.executionArtifact.findMany({
         where: {
-          meetingId: this.meetingId,
           type: ExecutionArtifactType.BLOCKER,
         },
         orderBy: {
           createdAt: "asc",
+        },
+        select: {
+          id: true,
+          confidence: true,
+          dueDate: true,
+          externalId: true,
+          meetingId: true,
+          owner: true,
+          title: true,
+          summary: true,
         },
       });
     } catch (error) {
