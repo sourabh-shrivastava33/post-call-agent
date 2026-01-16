@@ -35,15 +35,24 @@ class ActionItemsServices {
   /**
    * Fetch ONLY action items for this meeting
    */
-  async getAllActionItemsByMeetingId() {
+  async getAllActionItems() {
     try {
       return await prisma.executionArtifact.findMany({
         where: {
-          meetingId: this.meetingId,
           type: ExecutionArtifactType.ACTION,
         },
         orderBy: {
           createdAt: "asc",
+        },
+        select: {
+          id: true,
+          confidence: true,
+          dueDate: true,
+          externalId: true,
+          meetingId: true,
+          owner: true,
+          title: true,
+          summary: true,
         },
       });
     } catch (error) {
@@ -103,7 +112,9 @@ class ActionItemsServices {
   async updateAllActionItems(
     updateActionItemsData: UpdateActionItemsInterface[]
   ) {
-    let updatePayload = updateActionItemsData.map((item) => {
+    if (updateActionItemsData.length === 0) return;
+
+    const operations = updateActionItemsData.map((item) => {
       const updateData: any = {};
 
       if (item.summary !== undefined) {
@@ -119,20 +130,20 @@ class ActionItemsServices {
       }
 
       if (item.confidence !== undefined) {
-        // Convert 0–1 → 0–100
+        // Normalize 0–1 → 0–100
         updateData.confidence = Math.round(item.confidence * 100);
       }
-      return {
+
+      return prisma.executionArtifact.update({
         where: { id: item.id },
         data: updateData,
-      };
+      });
     });
 
     try {
-      await prisma.executionArtifact.updateMany({
-        data: updatePayload,
-      });
+      await prisma.$transaction(operations);
     } catch (error) {
+      console.error("Failed to update action items", error);
       throw error;
     }
   }

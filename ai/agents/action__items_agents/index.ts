@@ -77,7 +77,7 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
     this.handoffInput = null;
   }
 
-  async analyzeTranscript(
+  async runExecutionPipeline(
     transcript: string,
     context: ExecutionContext
   ): Promise<ActionItemsAgentOutput> {

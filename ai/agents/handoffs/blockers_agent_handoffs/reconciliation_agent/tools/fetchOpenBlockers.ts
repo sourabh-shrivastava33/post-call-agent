@@ -1,7 +1,6 @@
 import { RunContext, tool } from "@openai/agents";
 import { z } from "zod";
 import { ExecutionContext } from "../../../../../execution_orchasterate/execution_context";
-import { ExecutionArtifact } from "../../../../../../generated/prisma";
 import BlockersService from "../../../../../../services/ai_services/blockers.services";
 
 export const fetchOpenBlockers = tool({
@@ -20,10 +19,7 @@ Return an empty list if no blockers exist.
   strict: true,
   parameters: z.object({}), // no input params allowed
 
-  execute: async (
-    _args,
-    runContext?: RunContext<ExecutionContext>
-  ): Promise<{ existing_blockers: ExecutionArtifact[] }> => {
+  execute: async (_args, runContext?: RunContext<ExecutionContext>) => {
     try {
       if (!runContext?.context) {
         return { existing_blockers: [] };
@@ -31,7 +27,7 @@ Return an empty list if no blockers exist.
 
       const blockersService = new BlockersService(runContext.context.meetingId);
 
-      const blockers = await blockersService.getAllOpenBlockersByMeetingId();
+      const blockers = await blockersService.getAllBlockers();
 
       return { existing_blockers: blockers || [] };
     } catch {

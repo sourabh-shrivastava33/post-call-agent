@@ -4,6 +4,7 @@ import { z } from "zod";
  * New action item to be created
  */
 export const ReconciliationAddSchema = z.object({
+  title: z.string().min(1),
   summary: z.string().min(1),
   owner: z.string().nullable(),
   dueDate: z.string().nullable(), // YYYY-MM-DD

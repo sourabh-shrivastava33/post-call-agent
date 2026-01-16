@@ -25,5 +25,4 @@ class MeetingsController {
   }
 }
 
-const start = await startExecution("cmjmx5owo00001glb6d0irc6xr");
 export default new MeetingsController();
