@@ -1,6 +1,6 @@
 const OrchestratorAgentConstants = {
   name: "Orchestrator Agent",
-  model: "gpt-5-mini",
+  model: "gpt-5-nano",
   // Deterministic, moderate reasoning to balance quality and cost
   modelSettings: {
     // Use reasoning effort and low verbosity for deterministic orchestration

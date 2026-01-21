@@ -11,8 +11,14 @@ class BlockersReconciliationAgent extends BaseAgent<ExecutionContext> {
       BLOCKERS_RECONCILIATION_AGENT_INSTRUCTION,
       "gpt-5-mini",
       BlockersReconciliationOutputSchema,
-      { reasoning: { effort: "minimal" }, tool_choice: "required" },
-      [fetchOpenBlockers as any]
+      {
+        reasoning: { effort: "medium" },
+        text: {
+          verbosity: "low",
+        },
+        tool_choice: "required",
+      },
+      [fetchOpenBlockers as any],
     );
   }
 }

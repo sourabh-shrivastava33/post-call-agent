@@ -1,5 +1,6 @@
 import ActionItemsServices from "../../services/ai_services/action_items.services";
 import BlockersService from "../../services/ai_services/blockers.services";
+import { PersistExecutionPayload } from "./execution_context";
 
 class ExecutionOrchestrateServices {
   private meetingId: string;
@@ -10,7 +11,7 @@ class ExecutionOrchestrateServices {
     this.actionItemsService = new ActionItemsServices(this.meetingId);
     this.blockersService = new BlockersService(this.meetingId);
   }
-  async persistExecutionResults(persistData: Record<string, any>) {
+  async persistExecutionResults(persistData: PersistExecutionPayload) {
     const { actionItems, blockers } = persistData;
     const actionAddPayload = actionItems?.add || [];
     const actionUpdatePayload = actionItems?.update || [];
@@ -33,7 +34,7 @@ class ExecutionOrchestrateServices {
     } catch (error) {
       throw new Error(
         "Error persisting execution results: " +
-          (error instanceof Error ? error.message : JSON.stringify(error))
+          (error instanceof Error ? error.message : JSON.stringify(error)),
       );
     }
   }

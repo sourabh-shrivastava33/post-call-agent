@@ -28,7 +28,7 @@ class BlockersService {
       sourceStartTime?: string | null;
       sourceEndTime?: string | null;
       externalId?: string | null;
-    }[]
+    }[],
   ) {
     try {
       const meeting = await prisma.meeting.findUnique({
@@ -36,7 +36,7 @@ class BlockersService {
       });
       if (!meeting) {
         console.error(
-          `Cannot create blockers: meeting ${this.meetingId} not found`
+          `Cannot create blockers: meeting ${this.meetingId} not found`,
         );
         throw new Error(`Meeting not found: ${this.meetingId}`);
       }
@@ -79,30 +79,27 @@ class BlockersService {
       summary?: string;
       owner?: string | null;
       confidence?: number;
-    }[]
+    }[],
   ) {
     if (updateBlockersData.length === 0) return;
 
-    const operations = updateBlockersData.map((item) => {
-      const updateData: any = {};
-
-      if (item.summary !== undefined) updateData.summary = item.summary;
-      if (item.owner !== undefined) updateData.owner = item.owner;
-      if (item.title !== undefined) updateData.title = item.title;
-
-      if (item.confidence !== undefined) {
-        // Normalize 0–1 → 0–100 (DB format)
-        updateData.confidence = Math.round(item.confidence * 100);
-      }
-
-      return prisma.executionArtifact.update({
-        where: { id: item.id },
-        data: updateData,
-      });
-    });
-
     try {
-      await prisma.$transaction(operations);
+      for (const item of updateBlockersData) {
+        const updateData: any = {};
+
+        if (item.summary !== undefined) updateData.summary = item.summary;
+        if (item.owner !== undefined) updateData.owner = item.owner;
+        if (item.title !== undefined) updateData.title = item.title;
+
+        if (item.confidence !== undefined) {
+          updateData.confidence = Math.round(item.confidence * 100);
+        }
+
+        await prisma.executionArtifact.update({
+          where: { id: item.id },
+          data: updateData,
+        });
+      }
     } catch (error) {
       console.error("Failed to update blockers", error);
       throw error;

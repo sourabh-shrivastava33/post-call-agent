@@ -1,5 +1,5 @@
-import express from "express";
 import "dotenv/config";
+import express from "express";
 import meetingRouter from "../models/meetings/meetings.routes";
 
 const PORT = process.env.PORT || 8000;

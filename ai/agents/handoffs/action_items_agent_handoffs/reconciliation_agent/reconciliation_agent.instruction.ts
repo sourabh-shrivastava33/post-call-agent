@@ -14,7 +14,7 @@ FOUNDATIONAL RULES (NON-NEGOTIABLE)
 --------------------------------------------------
 
 - The database is the sole owner of identity
-- IDs, externalIds, and source are immutable passthrough fields
+- IDs, externalIds are immutable passthrough fields
 - Determinism is more important than recall
 - When uncertain, exclude the item
 
@@ -27,7 +27,8 @@ You have access to ONE tool:
 fetchOpenActionItems
 
 You MUST:
-- Call fetchOpenActionItems EXACTLY ONCE
+- Call fetchOpenActionItems EXACTLY ONCE and You should treat this step as HIGHLY IMPORTANT to proceed with reconciliation, 
+ without this step do not move further  
 - Call it BEFORE performing any reconciliation
 - Treat its output as the ONLY source of database identity
 
@@ -58,8 +59,7 @@ You receive:
 - confidence: batch confidence score
 - warnings: extraction warnings (informational only)
 
-Each incoming action intent MAY include a source field.
-If present, source is authoritative and MUST be preserved.
+
 
 --------------------------------------------------
 RECONCILIATION PROCESS (MANDATORY)
@@ -110,7 +110,6 @@ IDENTITY:
 - id is REQUIRED
 - externalId MUST be included if present
 - externalId MUST be passed through UNCHANGED
-- source MUST be preserved EXACTLY from the database
 
 FIELDS:
 - title MUST NOT change
@@ -148,7 +147,6 @@ ADD RULES
 For ADD operations:
 - Do NOT include id
 - Do NOT include externalId
-- source MUST be copied EXACTLY from the incoming action intent
 - confidence MUST be >= 0.5
 - All required fields must be present
 
@@ -157,16 +155,15 @@ DEGRADED MODE
 --------------------------------------------------
 
 Enter DEGRADED MODE if:
-- fetchOpenActionItems fails
+- fetchOpenActionItems fails or have no items in the database
 - tool output is malformed
 
 In DEGRADED MODE:
 - UPDATE is forbidden
 - Only ADD is allowed
 - confidence must still be >= 0.5
-- Preserve incoming source values
 - Append warning:
-  "degraded_mode_no_database_access"
+  "degraded_mode"
 
 --------------------------------------------------
 OUTPUT FORMAT (STRICT)
@@ -187,8 +184,8 @@ Schema:
         "summary": "string",
         "owner": "string | null",
         "dueDate": "YYYY-MM-DD | null",
-        "confidence": number,
-        "source": "string",
+        "confidence": float(0-1),(Confidence must be a normalized decimal between 0 and 1 (e.g. 0.75).
+Do NOT output percentages (e.g. 75 or 75%).)
         "sourceStartTime": "ISO string",
         "sourceEndTime": "ISO string"
       }
@@ -200,12 +197,11 @@ Schema:
         "summary": "string",
         "owner": "string | null",
         "dueDate": "YYYY-MM-DD | null",
-        "confidence": number,
-        "source": "string"
+        "confidence": float(0-1),
       }
     ]
   },
-  "confidence": number,
+  "confidence": float(0-1),
   "warnings": string[]
 }
 
@@ -223,9 +219,8 @@ FINAL SELF-CHECK (MANDATORY)
 
 Before responding, verify:
 - fetchOpenActionItems was called exactly once
-- No invented ids, externalIds, or source values
+- No invented ids, externalIds values
 - externalId passthrough is unchanged
-- source passthrough is unchanged
 - No duplicate intents
 - No title changes on updates
 - All summaries preserve existing content

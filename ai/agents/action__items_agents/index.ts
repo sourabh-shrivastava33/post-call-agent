@@ -11,6 +11,7 @@ import { ExecutionContext } from "../../execution_orchasterate/execution_context
 import { logger } from "../../../shared/logger";
 import ReconciliationAgent from "../handoffs/action_items_agent_handoffs/reconciliation_agent";
 import { ReconciliationsAgentOutputType } from "../handoffs/action_items_agent_handoffs/reconciliation_agent/reconciliation_agent.type";
+import { ZodError } from "zod/v4";
 
 class ActionItemsAgent extends BaseAgent<ExecutionContext> {
   private runner: Runner;
@@ -35,16 +36,16 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
           onHandoff: (ctx: RunContext, input?: ActionItemsAgentOutput) => {
             logger.log("✓ Handoff to ReconciliationAgent triggered");
             logger.log(
-              `  Input being passed: ${JSON.stringify(input, null, 2)}`
+              `  Input being passed: ${JSON.stringify(input, null, 2)}`,
             );
             logger.log(
-              `  Action items count: ${input?.action_items?.length || 0}`
+              `  Action items count: ${input?.action_items?.length || 0}`,
             );
             this.handoffCalled = true;
             this.handoffInput = input;
           },
         }),
-      ]
+      ],
     );
 
     this.runner = new Runner();
@@ -79,7 +80,7 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
 
   async runExecutionPipeline(
     transcript: string,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<ActionItemsAgentOutput> {
     const agent = this.getAgent();
     let attempts = 0;
@@ -92,9 +93,14 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
         });
 
         logger.log(
-          `Runner result keys: ${Object.keys(result || {}).join(", ")}`
+          `Runner result keys: ${Object.keys(result || {}).join(", ")}`,
         );
-        logger.log(`Final output type: ${typeof result?.finalOutput}`);
+
+        if (!this.handoffCalled) {
+          throw new Error(
+            "BLOCKERS_AGENT_CONTRACT_VIOLATION: handoff was not called",
+          );
+        }
 
         if (!result?.finalOutput) {
           return {
@@ -120,52 +126,36 @@ class ActionItemsAgent extends BaseAgent<ExecutionContext> {
         logger.log(`Handoff called flag: ${this.handoffCalled}`);
 
         // ✅ Try to parse as ReconciliationAgent output first (handoff occurred)
-        try {
-          const reconciliationResult =
-            ReconciliationsAgentOutputType.parse(parsedOutput);
+        const reconciliationResult =
+          ReconciliationsAgentOutputType.parse(parsedOutput);
 
-          logger.log("✓ Successfully parsed as ReconciliationAgent output");
-          logger.log(
-            `  Items to add: ${
-              reconciliationResult.action_items.add?.length || 0
-            }`
-          );
-          logger.log(
-            `  Items to update: ${
-              reconciliationResult.action_items.update?.length || 0
-            }`
-          );
+        logger.log("✓ Successfully parsed as ReconciliationAgent output");
 
-          this.reconciliationOutput = reconciliationResult;
+        logger.log(
+          `  Items to add: ${
+            reconciliationResult.action_items.add?.length || 0
+          }`,
+        );
 
-          return this.reconciliationOutput;
-        } catch (reconciliationParseError) {
-          // Not ReconciliationAgent output, try ActionItemsAgent output
-          logger.log(
-            "Not ReconciliationAgent output, trying ActionItemsAgent schema"
-          );
+        logger.log(
+          `  Items to update: ${
+            reconciliationResult.action_items.update?.length || 0
+          }`,
+        );
 
-          try {
-            const parsed = ActionItemsAgentOutputType.parse(parsedOutput);
-            logger.warn(
-              "⚠️ WARNING: Parsed as ActionItemsAgent output - handoff did NOT occur!"
-            );
-            logger.warn(
-              "This means the AI returned output directly instead of calling handoff."
-            );
-            return parsed;
-          } catch (actionItemsParseError) {
-            logger.warn("Failed to parse output as either schema:", {
-              output: parsedOutput,
-              reconciliationError: reconciliationParseError,
-              actionItemsError: actionItemsParseError,
-            });
-            throw actionItemsParseError;
-          }
-        }
-      } catch (error) {
+        this.reconciliationOutput = reconciliationResult;
+
+        return this.reconciliationOutput;
+      } catch (error: any) {
         attempts += 1;
         logger.warn(`ActionItemsAgent attempt ${attempts} failed:`, error);
+
+        if (error instanceof ZodError || error.name == "ZodError") {
+          let failureMessage: string = `ActionItemsAgent zod schema error: Error ${JSON.stringify(error)}`;
+          logger.warn(failureMessage);
+
+          throw new Error(failureMessage);
+        }
 
         // On last attempt, log more details
         if (attempts === 3) {

@@ -22,7 +22,9 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@openai/agents": "^0.3.7",
+    "@notionhq/client": "^5.7.0",
+    "@openai/agents": "file:C:/Users/soura/OneDrive/Desktop/openai-agents-js/packages/agents/openai-agents-0.4.0.tgz",
+    "@openai/agents-core": "file:C:/Users/soura/OneDrive/Desktop/openai-agents-js/packages/agents-core/openai-agents-core-0.4.0.tgz",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
     "chrono-node": "^2.9.0",

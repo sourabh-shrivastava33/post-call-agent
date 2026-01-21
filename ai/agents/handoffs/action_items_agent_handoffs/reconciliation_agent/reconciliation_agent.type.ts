@@ -8,8 +8,7 @@ export const ReconciliationAddSchema = z.object({
   summary: z.string().min(1),
   owner: z.string().nullable(),
   dueDate: z.string().nullable(), // YYYY-MM-DD
-  confidence: z.number().min(0).max(1),
-  source: z.string().min(1),
+  confidence: z.number().min(0),
   sourceStartTime: z.string().min(1),
   sourceEndTime: z.string().min(1),
 });
@@ -20,11 +19,11 @@ export const ReconciliationAddSchema = z.object({
  */
 export const ReconciliationUpdateSchema = z.object({
   id: z.string().min(1), // DB ID (system-owned)
-  updated_summary: z.string().min(1).optional(),
-  updated_owner: z.string().nullable().optional(),
-  updated_dueDate: z.string().nullable().optional(), // YYYY-MM-DD
-  updated_confidence: z.number().min(0).max(1).optional(),
-  source: z.string().min(1),
+  externalId: z.string().min(1),
+  summary: z.string().min(1).optional(),
+  owner: z.string().nullable().optional(),
+  dueDate: z.string().nullable().optional(), // YYYY-MM-DD
+  confidence: z.number().min(0).optional(),
 });
 
 /**
@@ -35,7 +34,7 @@ export const ReconciliationsAgentOutputType = z.object({
     add: z.array(ReconciliationAddSchema),
     update: z.array(ReconciliationUpdateSchema),
   }),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0),
   warnings: z.array(z.string()),
 });
 

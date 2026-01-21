@@ -8,6 +8,7 @@ import {
 } from "./followup_orchestrate.types";
 import { ExecutionContext } from "../execution_orchasterate/execution_context";
 import { FollowupAgentInitParams } from "../agents/followup_agent/followup_agent.type";
+import NotionExecutionAgent from "../agents/notion_agent";
 
 class FollowUpOrchestrator {
   private followupData: {
@@ -16,10 +17,12 @@ class FollowUpOrchestrator {
     followupIntent?: FollowUpIntentInterface | null;
   } = {};
   private followupAgent: FollowUpAgent = new FollowUpAgent();
+  private notionAgent: NotionExecutionAgent = new NotionExecutionAgent();
+
   constructor(
     action_items?: ExtendedActionItemsType,
     blockers?: ExtendedBlockersType,
-    followupIntent?: FollowUpIntentInterface | null
+    followupIntent?: FollowUpIntentInterface | null,
   ) {
     this.followupData.action_items = action_items;
     this.followupData.blockers = blockers;
@@ -42,10 +45,20 @@ class FollowUpOrchestrator {
     )
       followupPayload["blockers"] = this.followupData.blockers;
 
-    const followupAgentResult = await this.followupAgent.init(followupPayload);
+    try {
+      const followupAgentResult =
+        await this.followupAgent.init(followupPayload);
 
-    console.log(JSON.stringify(followupAgentResult));
+      console.log(JSON.stringify(followupAgentResult));
+    } catch (error) {
+      console.log(error);
+    }
+
+    try {
+    } catch (error) {}
   }
+
+  createNotionExecutionPayload() {}
 }
 
 export default FollowUpOrchestrator;

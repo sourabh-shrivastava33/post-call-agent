@@ -14,7 +14,7 @@ FOUNDATIONAL RULES (NON-NEGOTIABLE)
 --------------------------------------------------
 
 - The database is the sole owner of identity
-- IDs, externalIds, and source are immutable passthrough fields
+- IDs, externalIds are immutable passthrough fields
 - Determinism is more important than recall
 - When uncertain, exclude the blocker
 
@@ -57,9 +57,6 @@ You receive:
 - blockers: extracted blockers (no database IDs)
 - confidence: overall extraction confidence
 - warnings: extraction warnings (informational only)
-
-Each extracted blocker MAY include a source field.
-If present, source is authoritative and MUST be preserved.
 
 Extracted blockers NEVER contain:
 - id
@@ -112,13 +109,13 @@ IDENTITY:
 - id is REQUIRED
 - externalId MUST be included if present
 - externalId MUST be passed through UNCHANGED
-- source MUST be preserved EXACTLY from the database
 
 FIELDS:
 - title MUST NOT change
 - summary is append-only
 - owner may be set ONLY if previously null
 - confidence may be updated ONLY if higher than existing
+- dueDate MUST be passed through unchanged if present
 
 SUMMARY MERGE:
 - Preserve existing summary
@@ -141,7 +138,6 @@ If multiple extracted blockers map to the SAME existing blocker id:
 
 You MUST NOT emit multiple update entries for the same id.
 
-
 --------------------------------------------------
 ADD RULES
 --------------------------------------------------
@@ -149,8 +145,9 @@ ADD RULES
 For ADD operations:
 - Do NOT include id
 - Do NOT include externalId
-- source MUST be copied EXACTLY from the incoming blocker
 - confidence MUST be >= 0.5
+- dueDate is REQUIRED
+- If no due date is known, set dueDate to null
 - All required fields must be present
 
 --------------------------------------------------
@@ -169,7 +166,6 @@ In DEGRADED MODE:
 - UPDATE is forbidden
 - Only ADD is allowed
 - confidence must still be >= 0.5
-- Preserve incoming source values
 - Append warning:
   "degraded_mode_no_database_access"
 
@@ -191,8 +187,8 @@ Schema:
         "title": "string",
         "summary": "string",
         "owner": "string | null",
+        "dueDate": "string | null",
         "confidence": number,
-        "source": "string",
         "sourceStartTime": "ISO string",
         "sourceEndTime": "ISO string"
       }
@@ -203,8 +199,8 @@ Schema:
         "externalId": "string | null",
         "summary": "string",
         "owner": "string | null",
-        "confidence": number,
-        "source": "string"
+        "dueDate": "string | null",
+        "confidence": number
       }
     ]
   },
@@ -213,32 +209,17 @@ Schema:
 }
 
 --------------------------------------------------
-EMPTY SAFE OUTPUT
---------------------------------------------------
-
-Return this ONLY if:
-- blockers array is empty OR
-- all extracted blockers have confidence < 0.5
-
-{
-  "blockers": { "add": [], "update": [] },
-  "confidence": 0,
-  "warnings": ["no_safe_blockers"]
-}
-
---------------------------------------------------
 FINAL SELF-CHECK (MANDATORY)
 --------------------------------------------------
 
 Before responding, verify:
 - fetchOpenBlockers was called exactly once
-- No invented ids, externalIds, or source values
+- No invented ids or externalIds
 - externalId passthrough is unchanged
-- source passthrough is unchanged
 - No duplicate blockers for the same blocking intent
 - No title changes during updates
 - All summaries preserve existing content
 - All included blockers have confidence >= 0.5
+- All ADD blockers include dueDate (string or null)
 - Output schema matches EXACTLY
-
 `;

@@ -1,29 +1,15 @@
 import { prisma } from "../../config/prisma";
 import { randomUUID } from "crypto";
 import {} from "@prisma/client";
-import { ExecutionArtifactType } from "../../generated/prisma";
-
-interface UpdateActionItemsInterface {
-  id: string;
-  title?: string;
-  type: ExecutionArtifactType;
-  summary?: string;
-  owner?: string | null;
-  dueDate?: string | null; // YYYY-MM-DD
-  confidence?: number; // 0.0 - 1.0
-  externalId?: string | null;
-}
-interface CreateActionItemsInterface {
-  title: string;
-  type: ExecutionArtifactType;
-  summary: string;
-  owner: string | null;
-  dueDate: string | null; // YYYY-MM-DD
-  confidence: number; // 0.0 - 1.0
-  sourceStartTime: string;
-  sourceEndTime: string;
-  externalId?: string | null;
-}
+import {
+  ExecutionArtifactOrigin,
+  ExecutionArtifactType,
+} from "../../generated/prisma";
+import {
+  PersistExecutionPayload,
+  ActionItemAddWithExternalId,
+} from "../../ai/execution_orchasterate/execution_context";
+import { ExtendedActionItemsType } from "../../ai/followup_orchestrate/followup_orchestrate.types";
 
 class ActionItemsServices {
   private meetingId: string;
@@ -62,7 +48,7 @@ class ActionItemsServices {
   }
 
   async createAllActionItems(
-    createActionItemsData: CreateActionItemsInterface[]
+    createActionItemsData: ActionItemAddWithExternalId[],
   ) {
     try {
       const meeting = await prisma.meeting.findUnique({
@@ -70,7 +56,7 @@ class ActionItemsServices {
       });
       if (!meeting) {
         console.error(
-          `Cannot create action items: meeting ${this.meetingId} not found`
+          `Cannot create action items: meeting ${this.meetingId} not found`,
         );
         throw new Error(`Meeting not found: ${this.meetingId}`);
       }
@@ -83,6 +69,7 @@ class ActionItemsServices {
             summary: item.summary,
             owner: item.owner,
             externalId: item.externalId || randomUUID(),
+            origin: ExecutionArtifactOrigin.ACTION_ITEMS_AGENT,
             confidence: Math.round(item.confidence * 100),
           };
 
@@ -110,38 +97,38 @@ class ActionItemsServices {
    * Update an existing action item safely
    */
   async updateAllActionItems(
-    updateActionItemsData: UpdateActionItemsInterface[]
+    updateActionItemsData: ExtendedActionItemsType["update"],
   ) {
     if (updateActionItemsData.length === 0) return;
 
-    const operations = updateActionItemsData.map((item) => {
-      const updateData: any = {};
-
-      if (item.summary !== undefined) {
-        updateData.summary = item.summary;
-      }
-
-      if (item.owner !== undefined) {
-        updateData.owner = item.owner;
-      }
-
-      if (item.dueDate !== undefined) {
-        updateData.dueDate = item.dueDate ? new Date(item.dueDate) : null;
-      }
-
-      if (item.confidence !== undefined) {
-        // Normalize 0–1 → 0–100
-        updateData.confidence = Math.round(item.confidence * 100);
-      }
-
-      return prisma.executionArtifact.update({
-        where: { id: item.id },
-        data: updateData,
-      });
-    });
-
     try {
-      await prisma.$transaction(operations);
+      const operations = updateActionItemsData.map((item) => {
+        const updateData: any = {};
+
+        if (item.summary !== undefined) {
+          updateData.summary = item.summary;
+        }
+
+        if (item.owner !== undefined) {
+          updateData.owner = item.owner;
+        }
+
+        if (item.dueDate !== undefined) {
+          updateData.dueDate = item.dueDate ? new Date(item.dueDate) : null;
+        }
+
+        if (item.confidence !== undefined) {
+          // Normalize 0–1 → 0–100
+          updateData.confidence = Math.round(item.confidence * 100);
+        }
+
+        return prisma.executionArtifact.update({
+          where: { id: item.id },
+          data: updateData,
+        });
+      });
+
+      return operations;
     } catch (error) {
       console.error("Failed to update action items", error);
       throw error;

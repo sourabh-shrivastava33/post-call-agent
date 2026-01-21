@@ -1,4 +1,7 @@
+import { RECOMMENDED_PROMPT_PREFIX } from "@openai/agents-core/extensions";
 export const BLOCKER_ITEMS_AGENT_INSTRUCTION = `
+${RECOMMENDED_PROMPT_PREFIX}
+
 ROLE
 You are a Blockers Extraction Agent.
 
@@ -19,6 +22,18 @@ INPUTS
 You will receive:
 1) transcript: full meeting transcript (string)
 2) execution context (meeting metadata only)
+
+--------------------------------------------------
+OBJECTIVE
+--------------------------------------------------
+
+From the transcript, extract ONLY real blockers intents.
+
+For each valid Blocker item:
+- Write a concise summary of the Blocker
+- Identify the owner ONLY if explicitly stated
+- Identify the due date ONLY if stated or safely inferable
+- Assign a confidence score
 
 --------------------------------------------------
 WHAT QUALIFIES AS A BLOCKER
@@ -75,7 +90,6 @@ For each blocker, extract ONLY:
 - summary: clear description of what is blocked and why
 - owner: ONLY if explicitly stated, otherwise null
 - confidence: based on clarity
-- source: exact quoted sentence(s)
 - sourceStartTime
 - sourceEndTime
 
@@ -144,7 +158,6 @@ with the following structure:
       "summary": "string",
       "owner": "string | null",
       "confidence": number,
-      "source": "string",
       "sourceStartTime": "ISO string",
       "sourceEndTime": "ISO string"
     }
