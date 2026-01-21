@@ -1,4 +1,9 @@
-import { ExecutionContext } from "./execution_context";
+import {
+  ActionItemAddWithExternalId,
+  BlockerAddWithExternalId,
+  ExecutionContext,
+  PersistExecutionPayload,
+} from "./execution_context";
 import { logger } from "../../shared/logger";
 import OrchestratorAgent from "../agents/orchestrator_agent";
 import { TranscriptSegment } from "../../generated/prisma";
@@ -10,6 +15,17 @@ import ExecutionOrchestrateServices from "./excution_orchasterator.services";
 import ActionItemsAgentConstants from "../agents/action__items_agents/constants";
 import BlockerItemsAgentConstants from "../agents/blocker_items_agent/contants";
 import FollowUpOrchestrator from "../followup_orchestrate";
+import {
+  ExtendedActionAdd,
+  ExtendedActionItemsType,
+  ExtendedActionItemsTypeNotion,
+  ExtendedBlockersType,
+} from "../followup_orchestrate/followup_orchestrate.types";
+import { randomUUID } from "node:crypto";
+import NotionExecutionAgent from "../agents/notion_agent";
+import { withTrace } from "@openai/agents";
+import { NotionInputInterface } from "../agents/notion_agent/notion_agent.types";
+import { mergeItemWithNotionPayload } from "./utility";
 
 interface OrchestratorRunParams {
   context: ExecutionContext;
@@ -26,10 +42,12 @@ class ExecutionOrchestrate {
   private blockersAgent: BlockersAgent;
   private executionServices: ExecutionOrchestrateServices | null = null;
   private followupOrchestrator: FollowUpOrchestrator | null = null;
+  private notionAgent: NotionExecutionAgent;
   constructor() {
     this.orchestrator = new OrchestratorAgent();
     this.actionItemsAgent = new ActionItemsAgent();
     this.blockersAgent = new BlockersAgent();
+    this.notionAgent = new NotionExecutionAgent();
   }
   async run({
     context,
@@ -38,12 +56,18 @@ class ExecutionOrchestrate {
   }: OrchestratorRunParams) {
     try {
       logger.log(
-        `Execution started for the meeting with as ID ${context.meetingId}`
+        `Execution started for the meeting with as ID ${context.meetingId}`,
       );
 
       const orchestratorAgent = this.orchestrator;
+      const transcriptString = this.getTranscriptString(transcriptSegments);
 
-      // const transcriptString = this.getTranscriptString(transcriptSegments);
+      let _call_action_items_agent;
+      let _call_blockers_agent;
+      let _call_followup_agent;
+      let _followupIntent;
+      let _to;
+      let _from;
 
       const {
         call_action_items_agent,
@@ -52,60 +76,82 @@ class ExecutionOrchestrate {
         followupIntent,
         to,
         from,
-      } = await orchestratorAgent.analyzeTranscript(testString);
+      } = await orchestratorAgent.analyzeTranscript(transcriptString);
+      _call_action_items_agent = call_action_items_agent;
+      _call_followup_agent = call_followup_agent;
+      _call_blockers_agent = call_blockers_agent;
+      _followupIntent = followupIntent;
+      _from = from || null;
+      _to = to || null;
+
       const isAnyAgentCalled =
-        call_action_items_agent ||
-        call_blockers_agent ||
-        (call_followup_agent && followupIntent);
+        _call_action_items_agent ||
+        _call_blockers_agent ||
+        (_call_followup_agent && _followupIntent);
 
       if (!isAnyAgentCalled) return;
+
       let agentRunPromise = [];
-      if (call_action_items_agent)
+      if (_call_action_items_agent)
         agentRunPromise.push(
-          this.actionItemsAgent.runExecutionPipeline(testString, context)
+          this.actionItemsAgent.runExecutionPipeline(transcriptString, context),
         );
-      if (call_blockers_agent)
+      if (_call_blockers_agent)
         agentRunPromise.push(
-          this.blockersAgent.runExecutionPipeline(testString, context)
+          this.blockersAgent.runExecutionPipeline(transcriptString, context),
         );
 
-      const [actionItemsResult, blockersResult] = await Promise.all(
-        agentRunPromise
+      const [actionItemsResult, blockersResult] =
+        await Promise.all(agentRunPromise);
+
+      const { new_action_items, new_blockers } = this.createPersistPayload(
+        actionItemsResult?.action_items,
+        blockersResult?.blockers,
       );
-      let persistObj: Record<string, any> = {};
+
+      let persistObj: PersistExecutionPayload = {};
       if (
-        (actionItemsResult?.action_items.add.length ||
-          actionItemsResult?.action_items.update.length) &&
+        (new_action_items.add.length || new_action_items.update.length) &&
         actionItemsResult.confidence >=
           ActionItemsAgentConstants.confidenceThreshold
       ) {
-        persistObj["actionItems"] = actionItemsResult.action_items;
+        persistObj["actionItems"] = new_action_items;
       }
       if (
-        (blockersResult?.blockers.add.length ||
-          blockersResult?.blockers.update.length) &&
+        (new_blockers.add.length || new_blockers.update.length) &&
         blockersResult.confidence >=
           BlockerItemsAgentConstants.confidenceThreshold
       ) {
-        persistObj["blockers"] = blockersResult.blockers;
+        persistObj["blockers"] = new_blockers;
       }
 
       this.executionServices = new ExecutionOrchestrateServices(
-        context.meetingId
+        context.meetingId,
       );
 
+      if (!Object.keys(persistObj).length)
+        throw new Error("No data to persist or change");
+
       await this.executionServices.persistExecutionResults(persistObj);
+
       const followupOrchestrate = new FollowUpOrchestrator(
         actionItemsResult.action_items,
         blockersResult.blockers,
-        followupIntent
+        _followupIntent,
       );
       await followupOrchestrate.run();
+      const notionAgentPayload = this.createNotionAgentPayload(
+        new_action_items,
+        new_blockers,
+      );
+
+      await this.notionAgent.run(notionAgentPayload);
     } catch (error) {
       const failureReason =
         error instanceof Error ? error.message : JSON.stringify(error);
       onCallbacks?.onWorkflowFailed!(failureReason);
       console.log(error);
+      throw error;
     }
   }
 
@@ -119,51 +165,75 @@ class ExecutionOrchestrate {
       } (start: ${curr.startTime.toISOString()}, end: ${curr.endTime.toISOString()})\n`);
     }, "");
   }
+
+  createPersistPayload(
+    action_items?: ExtendedActionItemsType,
+    blockers?: ExtendedBlockersType,
+  ): {
+    new_action_items: {
+      add: ActionItemAddWithExternalId[];
+      update: ExtendedActionItemsType["update"];
+    };
+    new_blockers: {
+      add: BlockerAddWithExternalId[];
+      update: ExtendedBlockersType["update"];
+    };
+  } {
+    const newActionPayload = {
+      add: [] as ActionItemAddWithExternalId[],
+      update: [] as ExtendedActionItemsType["update"],
+    };
+
+    const newBlockersPayload = {
+      add: [] as BlockerAddWithExternalId[],
+      update: [] as ExtendedBlockersType["update"],
+    };
+
+    if (action_items?.add?.length) {
+      newActionPayload.add = action_items.add.map((item) => ({
+        ...item,
+        externalId: randomUUID(),
+      }));
+    }
+
+    if (action_items?.update?.length) {
+      newActionPayload.update = action_items.update;
+    }
+
+    if (blockers?.add?.length) {
+      newBlockersPayload.add = blockers.add.map((item) => ({
+        ...item,
+        externalId: randomUUID(),
+      }));
+    }
+
+    if (blockers?.update?.length) {
+      newBlockersPayload.update = blockers.update;
+    }
+
+    return {
+      new_action_items: newActionPayload,
+      new_blockers: newBlockersPayload,
+    };
+  }
+
+  createNotionAgentPayload(
+    actionItems: {
+      add: ActionItemAddWithExternalId[];
+      update: ExtendedActionItemsType["update"];
+    },
+    blockers: {
+      add: BlockerAddWithExternalId[];
+      update: ExtendedBlockersType["update"];
+    },
+  ): NotionInputInterface {
+    let notionAdd: NotionInputInterface["add"] = [];
+    let notionUpdate: NotionInputInterface["update"] = [];
+
+    mergeItemWithNotionPayload(actionItems, notionAdd, notionUpdate);
+    mergeItemWithNotionPayload(blockers, notionAdd, notionUpdate);
+    return { add: notionAdd, update: notionUpdate };
+  }
 }
 
 export default ExecutionOrchestrate;
-
-let testString = `Alex (Agency – Senior Account Director): Thanks everyone for joining. Today’s goal is to review Q1 pipeline performance, confirm next steps, and align on follow-ups before finance decisions are finalized.
-
-Rachel (Client – CMO): Thanks Alex. Before we proceed, I want to be clear — leadership expects a written follow-up after this call with concrete next steps.
-
-Daniel (Agency – Growth Strategist): Understood. At a high level, pipeline volume is up 20% quarter over quarter, but win rate has dropped from 22% to 15%.
-
-Rachel (Client – CMO): That drop is concerning. I’ll need a follow-up explaining what actions we’re taking to improve revenue efficiency.
-
-Mike (Client – Head of Sales): From sales’ side, lead quality is inconsistent, especially from paid social. That’s blocking my team’s ability to close deals.
-
-Sophia (Agency – Paid Media Lead): That’s fair. Meta campaigns are currently driving low-intent traffic due to audience expansion changes.
-
-Mike (Client – Head of Sales): Until that’s fixed, SDR productivity will remain a blocker for us.
-
-Alex (Agency – Senior Account Director): Agreed. Action item on our side — tighten ICP targeting across paid social and pause low-intent Meta campaigns starting this week. Sophia will own execution.
-
-Sophia (Agency – Paid Media Lead): Confirmed. I’ll implement those changes by Wednesday.
-
-Rachel (Client – CMO): Good. I also want a follow-up that shows how tightening ICP impacts forecasted revenue, not just lead volume.
-
-Daniel (Agency – Growth Strategist): We’ll update the revenue forecast and include projected impact on pipeline and closed-won deals.
-
-Alex (Agency – Senior Account Director): Noted as an action item — revised revenue-based forecast by Friday.
-
-Rachel (Client – CMO): Another blocker is attribution. Finance is questioning whether paid media influences enterprise deals, and we don’t have clean multi-touch attribution.
-
-Sophia (Agency – Paid Media Lead): Correct. HubSpot and Salesforce multi-touch attribution is not fully implemented yet.
-
-Mike (Client – Head of Sales): Until attribution is fixed, budget approvals are at risk.
-
-Alex (Agency – Senior Account Director): Action item — we’ll audit the current attribution setup and document what’s missing to support multi-touch reporting.
-
-Rachel (Client – CMO): I’ll need that audit before my exec meeting next week.
-
-Rachel (Client – CMO): Please follow up with me by email after this call summarizing the agreed actions, blockers, and next steps.
-
-Rachel (Client – CMO): Send the follow-up to rachel@client.com today so I can review it with finance.
-
-Rachel (Client – CMO): One more question for the follow-up — can you confirm whether tightening ICP will reduce demo no-show rates?
-
-Alex (Agency – Senior Account Director): We’ll analyze historical data and include that clarification in the follow-up.
-
-Alex (Agency – Senior Account Director): Thanks everyone. We’ll proceed on the action items and send the follow-up as requested.
-`;

@@ -144,11 +144,19 @@ async function startExecution(meetingId: string): Promise<void> {
         meetingId,
         status: "WORKFLOW_STARTED",
       });
-      await executionOrchestrator.run({
-        context: executionContext,
-        transcriptSegments: transcriptSegment || [],
-        onCallbacks,
-      });
+
+      try {
+        // Create a new trace for the workflow
+
+        // Run the orchestrator within the trace context
+        await executionOrchestrator.run({
+          context: executionContext,
+          transcriptSegments: transcriptSegment || [],
+          onCallbacks,
+        });
+      } catch (error) {
+        throw new Error(JSON.stringify(error));
+      }
     }
   } catch (error) {
     await meetingsServices.updateMeetingStatus({

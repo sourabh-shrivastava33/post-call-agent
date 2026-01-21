@@ -122,11 +122,9 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
         .map((item) => {
           const changes: string[] = [];
 
-          if (item.updated_summary) changes.push("summary updated");
-          if (item.updated_dueDate)
-            changes.push(`due date updated to ${item.updated_dueDate}`);
-          if (item.updated_owner)
-            changes.push(`owner updated to ${item.updated_owner}`);
+          if (item.summary) changes.push("summary updated");
+          if (item.dueDate) changes.push(`due date updated to ${item.dueDate}`);
+          if (item.owner) changes.push(`owner updated to ${item.owner}`);
 
           return `- Action item ${item.id}: ${changes.join(", ")}.`;
         })

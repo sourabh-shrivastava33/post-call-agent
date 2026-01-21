@@ -5,11 +5,11 @@ import { z } from "zod";
  * Title is stable, summary is descriptive.
  */
 export const BlockerAddSchema = z.object({
-  title: z.string().min(1).max(120),
+  title: z.string().min(1),
   summary: z.string().min(1),
   owner: z.string().nullable(),
-  confidence: z.number().min(0).max(1),
-  source: z.string().min(1),
+  dueDate: z.string().nullable(), // YYYY-MM-DD
+  confidence: z.number().min(0),
   sourceStartTime: z.string().min(1),
   sourceEndTime: z.string().min(1),
 });
@@ -22,12 +22,11 @@ export const BlockerAddSchema = z.object({
  */
 export const BlockerUpdateSchema = z.object({
   id: z.string().min(1), // DB ID (system-owned)
-
-  summary: z.string().min(1).optional(), // merged / appended summary
-  owner: z.string().nullable().optional(), // only if previously null
-  confidence: z.number().min(0).max(1).optional(), // only if higher than existing
-
-  source: z.string().min(1),
+  externalId: z.string().min(1),
+  summary: z.string().min(1).optional(),
+  owner: z.string().nullable().optional(),
+  dueDate: z.string().nullable().optional(), // YYYY-MM-DD
+  confidence: z.number().min(0).optional(),
 });
 
 /**

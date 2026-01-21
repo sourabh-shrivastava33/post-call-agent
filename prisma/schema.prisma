@@ -70,9 +70,10 @@ model ExecutionArtifact {
   owner           String?
   dueDate         DateTime?
   confidence      Float
+  pageId     String?
   status          ExecutionArtifactStatus @default(PLANNED)
   origin          ExecutionArtifactOrigin @default(DEFAULT)
-  externalId      String
+  externalId      String @unique
   sourceStartTime DateTime
   sourceEndTime   DateTime
   createdAt       DateTime @default(now())
@@ -137,7 +138,6 @@ WORKFLOW_ENDED
 enum ExecutionArtifactOrigin {
   ACTION_ITEMS_AGENT
   BLOCKER_AGENT
-  FOLLOW_UP_AGENT
 DEFAULT
 }
 

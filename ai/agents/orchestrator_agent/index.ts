@@ -13,23 +13,23 @@ class OrchestratorAgent extends BaseAgent {
       ORCHESTRATOR_INSTRUCTIONS,
       OrchestratorAgentConstants.model,
       OrchestratorOutputType,
-      OrchestratorAgentConstants.modelSettings
+      OrchestratorAgentConstants.modelSettings,
     );
     this.runner = new Runner();
   }
 
   async analyzeTranscript(
-    transcriptSegmentString: string
+    transcriptSegmentString: string,
   ): Promise<typeof OrchestratorOutputType._type> {
     try {
       if (!transcriptSegmentString)
         throw new Error(
-          "This workflow need transcripts to run. Please provide valid transcripts"
+          "This workflow need transcripts to run. Please provide valid transcripts",
         );
 
       const agent = this.getAgent();
-
-      const result = await this.runner.run(agent, transcriptSegmentString);
+      const runnerInstance = new Runner();
+      const result = await runnerInstance.run(agent, transcriptSegmentString);
 
       let finalOutput: any = result.finalOutput;
       if (typeof finalOutput === "string") {

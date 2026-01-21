@@ -8,8 +8,8 @@ export const BlockerSchema = z.object({
   title: z.string().min(3).max(120),
   summary: z.string().min(5).max(500),
   owner: z.string().min(1).max(100).nullable(),
+  dueDate: z.string().nullable(),
   confidence: z.number().min(0).max(1),
-  source: z.string().min(10),
   sourceStartTime: z.string().min(1),
   sourceEndTime: z.string().min(1),
 });
