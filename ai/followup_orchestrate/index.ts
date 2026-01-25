@@ -1,38 +1,34 @@
 import { ReconciliationsAgentOutputInterface } from "../agents/handoffs/action_items_agent_handoffs/reconciliation_agent/reconciliation_agent.type";
 import { BlockersReconciliationOutput } from "../agents/handoffs/blockers_agent_handoffs/reconciliation_agent/recociliation_agent.types";
-import { FollowUpIntentInterface } from "../agents/orchestrator_agent/orchestrator_agent_types";
 import FollowUpAgent from "../agents/followup_agent";
 import {
   ExtendedActionItemsType,
   ExtendedBlockersType,
 } from "./followup_orchestrate.types";
-import { ExecutionContext } from "../execution_orchasterate/execution_context";
 import { FollowupAgentInitParams } from "../agents/followup_agent/followup_agent.type";
-import NotionExecutionAgent from "../agents/notion_agent";
 
 class FollowUpOrchestrator {
   private followupData: {
     action_items?: ExtendedActionItemsType;
     blockers?: ExtendedBlockersType;
-    followupIntent?: FollowUpIntentInterface | null;
+    transcriptString?: string;
   } = {};
   private followupAgent: FollowUpAgent = new FollowUpAgent();
-  private notionAgent: NotionExecutionAgent = new NotionExecutionAgent();
 
   constructor(
     action_items?: ExtendedActionItemsType,
     blockers?: ExtendedBlockersType,
-    followupIntent?: FollowUpIntentInterface | null,
+    transcriptString?: any | null,
   ) {
     this.followupData.action_items = action_items;
     this.followupData.blockers = blockers;
-    this.followupData.followupIntent = followupIntent ?? null;
+    this.followupData.transcriptString = transcriptString ?? null;
   }
 
   async run() {
     let followupPayload: FollowupAgentInitParams = {};
-    if (this.followupData.followupIntent)
-      followupPayload["followupIntent"] = this.followupData.followupIntent;
+    if (this.followupData.transcriptString)
+      followupPayload["transcriptString"] = this.followupData.transcriptString;
     if (
       this.followupData.action_items &&
       Object.keys(this.followupData.action_items).length

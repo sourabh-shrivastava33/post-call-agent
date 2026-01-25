@@ -2,7 +2,10 @@ import { run, Runner } from "@openai/agents";
 import { SourceType, TranscriptSegment } from "../../../generated/prisma";
 import BaseAgent from "../baseAgent";
 import { ORCHESTRATOR_INSTRUCTIONS } from "./orchestrator_agent_instructions";
-import { OrchestratorOutputType } from "./orchestrator_agent_types";
+import {
+  OrchestratorDecisionSchema,
+  OrchestratorOutputType,
+} from "./orchestrator_agent_types";
 import OrchestratorAgentConstants from "./constants";
 
 class OrchestratorAgent extends BaseAgent {
@@ -20,7 +23,7 @@ class OrchestratorAgent extends BaseAgent {
 
   async analyzeTranscript(
     transcriptSegmentString: string,
-  ): Promise<typeof OrchestratorOutputType._type> {
+  ): Promise<OrchestratorDecisionSchema> {
     try {
       if (!transcriptSegmentString)
         throw new Error(

@@ -7,31 +7,27 @@ import nodemailer from "nodemailer";
 import "dotenv/config";
 
 export const sendFollowupEmail = tool({
-  description: "Send a follow-up email to a client (production hardened)",
+  description: "Send a follow-up email to a client",
   strict: true,
 
-  // ✅ ALL FIELDS REQUIRED — OpenAI schema compliant
   parameters: z.object({
-    to: z.string().email(),
+    to: z.email().default("sourabhshrivastava@gmail.com"),
     subject: z.string().min(3),
     body: z.string().min(20),
 
-    // 👇 REQUIRED, even if usually false
     dry_run: z.boolean(),
 
-    // 👇 REQUIRED (can be empty string if unavailable)
-    meeting_id: z.string(),
+    // Enforce non-empty meeting_id
+    meeting_id: z.string().min(1),
   }),
 
   execute: async (
     { to, subject, body, dry_run, meeting_id },
-    _runContext?: RunContext
+    _runContext?: RunContext,
   ) => {
     try {
-      // 🧠 Enforce default behavior HERE, not in schema
       const isDryRun = dry_run === true;
 
-      // 🔁 Idempotency hash
       const hash = crypto
         .createHash("sha256")
         .update(`${to}|${subject}|${body}`)
@@ -46,7 +42,6 @@ export const sendFollowupEmail = tool({
       });
 
       if (isDryRun) {
-        logger.log("🧪 DRY RUN — email not sent");
         return {
           status: "dry_run",
           to,
@@ -55,7 +50,6 @@ export const sendFollowupEmail = tool({
         };
       }
 
-      // 🔧 Build SMTP config from environment
       const smtpHost = process.env.SMTP_HOST;
       const smtpPort = process.env.SMTP_PORT
         ? parseInt(process.env.SMTP_PORT, 10)
@@ -65,17 +59,9 @@ export const sendFollowupEmail = tool({
       const from = process.env.FROM_EMAIL || smtpUser;
 
       if (!smtpHost || !smtpPort) {
-        const msg = "SMTP configuration missing (SMTP_HOST/SMTP_PORT)";
-        logger.error("❌ Email send failed - missing SMTP config", {
-          error: msg,
-          to,
-          subject,
-          meeting_id,
-        });
-
         return {
           status: "failed",
-          reason: msg,
+          reason: "SMTP configuration missing",
           to,
           subject,
           meeting_id,
@@ -85,34 +71,16 @@ export const sendFollowupEmail = tool({
       const transporter = nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
-        secure: smtpPort === 465, // true for 465, false for other ports
+        secure: smtpPort === 465,
         auth:
-          smtpUser && smtpPass
-            ? {
-                user: smtpUser,
-                pass: smtpPass,
-              }
-            : undefined,
+          smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
       });
 
-      // Send email
-      const mailOptions = {
+      const info: any = await transporter.sendMail({
         from: from || `no-reply@${smtpHost}`,
         to,
         subject,
-        text: body,
-        html: body,
-      };
-
-      const info: any = await transporter.sendMail(mailOptions);
-
-      logger.log("📨 Email SENT", {
-        to,
-        subject,
-        meeting_id,
-        messageId: info.messageId,
-        accepted: info.accepted,
-        response: info.response,
+        text: body, // plain text only
       });
 
       return {

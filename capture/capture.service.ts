@@ -2,23 +2,40 @@ import meetingsServices from "../models/meetings/meetings.services";
 import GoogleMeetBot from "../bot/google-meet-bot/googleMeetBot";
 import { MeetingStatus } from "../generated/prisma";
 import TranscriptProcessor from "../transcript/transcript.controller";
+import { slackLogger } from "../models/meetings/slack/slack.logger";
+import {
+  agentJoinedMeetingBlocks,
+  executionFailedBlocks,
+  executionStartedBlocks,
+  meetingDetectedBlocks,
+  meetingEndedBlocks,
+  transcriptCaptureStartedBlocks,
+} from "../models/meetings/slack/slack.utility";
 class CaptureService {
   async startCapture(
     meetingUrl: string,
     meetingId: string,
-    meetingBotSessionId: string
+    meetingBotSessionId: string,
   ) {
     try {
       const botMail = process.env.BOT_EMAIL;
       const botPassword = process.env.BOT_PASSWORD;
       const onCallbacks = {
-        onJoining: async () => {
+        onJoining: async (meetingUrl: string) => {
           await meetingsServices.updateMeetingBotSession({
             meetingBotSessionId: meetingBotSessionId,
             data: {
               joinStartAt: new Date(),
             },
           });
+
+          await slackLogger.log(
+            meetingDetectedBlocks({
+              meetingId: meetingId,
+              meetingUrl: meetingUrl,
+              triggeredBy: "",
+            }), // replace when available
+          );
         },
         onJoined: async () => {
           await meetingsServices.updateMeetingStatus({
@@ -33,6 +50,7 @@ class CaptureService {
               joinSuccess: true,
             },
           });
+          await slackLogger.log(agentJoinedMeetingBlocks({ meetingId }));
         },
 
         onCaptureStart: async () => {
@@ -40,6 +58,9 @@ class CaptureService {
             meetingId,
             status: MeetingStatus.CAPTURING,
           });
+          await slackLogger.log(
+            transcriptCaptureStartedBlocks({ source: "Google Meet" }),
+          );
         },
 
         onFailure: async (reason: string) => {
@@ -56,6 +77,7 @@ class CaptureService {
               failureReason: reason,
             },
           });
+          await slackLogger.log(executionFailedBlocks({ reason }));
         },
 
         onMeetingEnd: async (meetingId: string) => {
@@ -63,6 +85,10 @@ class CaptureService {
             meetingId: meetingId,
             status: MeetingStatus.CAPTURED,
           });
+
+          await slackLogger.log(
+            meetingEndedBlocks({ durationMinutes: 0 }), // replace when available
+          );
 
           const processor = new TranscriptProcessor(meetingId);
           await processor.processTranscript();
@@ -101,7 +127,7 @@ class CaptureService {
       throw new Error(
         `Error while trying  to capture meeting: ${
           error instanceof Error ? error.message : JSON.stringify(error)
-        }`
+        }`,
       );
     }
   }

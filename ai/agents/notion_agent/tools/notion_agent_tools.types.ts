@@ -55,3 +55,19 @@ export const BuildNotionMutationPayloadSchema = z.object({
     sourceEndTime: z.boolean(),
   }),
 });
+
+export const SlackConfirmationSchema = z.object({
+  meetingId: z.string(),
+  notionDatabaseUrl: z.string().nullable(),
+
+  result: z.object({
+    created: z.number(),
+    updated: z.number(),
+  }),
+
+  errors: z.array(z.string()),
+});
+
+export type slackConfirmationSchemaType = z.infer<
+  typeof SlackConfirmationSchema
+>;

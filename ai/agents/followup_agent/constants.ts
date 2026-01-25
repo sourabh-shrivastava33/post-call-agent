@@ -7,6 +7,7 @@ const FollowupAgentConstants = {
     temperature: 0.15,
     top_p: 0.9,
     max_tokens: 1200,
+    tool_choice: "required",
   },
 
   confidenceThreshold: 0.7,

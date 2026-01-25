@@ -106,6 +106,13 @@ model CaptionEvent {
   @@index([meetingId, sequenceNumber])
 }
 
+
+model SlackEvent {
+  id          String   @id
+  receivedAt DateTime @default(now())
+}
+
+
 enum SourceType {
   CAPTION
   STT

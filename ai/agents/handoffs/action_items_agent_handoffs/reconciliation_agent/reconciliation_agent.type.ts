@@ -20,6 +20,7 @@ export const ReconciliationAddSchema = z.object({
 export const ReconciliationUpdateSchema = z.object({
   id: z.string().min(1), // DB ID (system-owned)
   externalId: z.string().min(1),
+  title: z.string().min(1).optional(),
   summary: z.string().min(1).optional(),
   owner: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(), // YYYY-MM-DD

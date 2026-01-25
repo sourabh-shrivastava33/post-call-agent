@@ -10,9 +10,6 @@ import { sendFollowupEmail } from "./tools/send_followup_email";
 import { ExecutionContext } from "../../execution_orchasterate/execution_context";
 import { logger } from "../../../shared/logger";
 import FollowupAgentConstants from "./constants";
-import { FollowUpIntentInterface } from "../orchestrator_agent/orchestrator_agent_types";
-import { ActionItemsAgentOutput } from "../action__items_agents/action_items_agent_types";
-import { BlockersReconciliationOutput } from "../handoffs/blockers_agent_handoffs/reconciliation_agent/recociliation_agent.types";
 import {
   ExtendedActionItemsType,
   ExtendedBlockersType,
@@ -28,21 +25,21 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
       FollowupAgentConstants.model,
       FollowUpAgentOutputType,
       FollowupAgentConstants.modelSettings,
-      [sendFollowupEmail as any]
+      [sendFollowupEmail as any],
     );
   }
 
   async init({
     actionItems,
     blockers,
-    followupIntent,
+    transcriptString,
   }: FollowupAgentInitParams) {
     const agent = this.getAgent();
 
-    if (!followupIntent) return;
+    if (!transcriptString) return;
 
     let userQuery = this.buildReconciledContextString({
-      followupIntent,
+      transcriptString,
       actionItems,
       blockers,
     });
@@ -78,25 +75,12 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
 
     const output = FollowUpAgentOutputType.parse(parsed);
 
-    logger.log(`📨 Follow-up emails generated: ${output.emails.length}`);
-
     return output;
   }
 
-  buildFollowupIntentString(intent: FollowUpIntentInterface): string {
-    switch (intent.reason) {
-      case "explicit_commitment":
-        return "This email is a follow-up on a commitment made during the meeting.";
-
-      case "recap_request":
-        return "This email is sent in response to a request for a recap of the discussion.";
-
-      case "client_question":
-        return `This email addresses a client question regarding ${intent.queryContext?.topic}.`;
-
-      default:
-        return "This email is a follow-up related to the meeting.";
-    }
+  buildFollowupIntentString(transcriptString: string): string {
+    return `Meeting Transcript:
+                         ${transcriptString}`;
   }
 
   summarizeActionAdds(adds: ExtendedActionItemsType["add"]): string {
@@ -163,25 +147,25 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
     );
   }
   buildReconciledContextString(params: {
-    followupIntent: FollowUpIntentInterface;
+    transcriptString: string;
     actionItems?: ExtendedActionItemsType;
     blockers?: ExtendedBlockersType;
   }): string {
     const sections: string[] = [];
 
-    sections.push(this.buildFollowupIntentString(params.followupIntent));
+    sections.push(this.buildFollowupIntentString(params.transcriptString));
 
     if (params.actionItems) {
       sections.push(
         this.summarizeActionAdds(params.actionItems.add),
-        this.summarizeActionUpdates(params.actionItems.update)
+        this.summarizeActionUpdates(params.actionItems.update),
       );
     }
 
     if (params.blockers) {
       sections.push(
         this.summarizeBlockerAdds(params.blockers.add),
-        this.summarizeBlockerUpdates(params.blockers.update)
+        this.summarizeBlockerUpdates(params.blockers.update),
       );
     }
 

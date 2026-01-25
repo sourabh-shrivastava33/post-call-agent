@@ -1,14 +1,13 @@
 import BrowserManager from "./browserManagement";
 import { Page } from "playwright";
 import captionsController from "./captions/captions-controller";
-import { CaptionObserver } from "./captions/captions-observer";
 import startExecution from "../../ai/start_execution";
 interface GoogleMeetBotParams {
   botEmail: string;
   botPassword: string;
   meetingId: string;
   onCallbacks?: {
-    onJoining?: () => void;
+    onJoining?: (meetingUrl: string) => void;
     onJoined?: () => void;
     onCaptureStart?: () => void;
     onMeetingEnd?: (meetingId: string) => Promise<void>;
@@ -139,7 +138,7 @@ class GoogleMeetBot {
 
       // 3️⃣ Now wait for textarea AFTER opening chat
       const chatTextarea = page.locator(
-        'textarea[aria-label="Send a message"]'
+        'textarea[aria-label="Send a message"]',
       );
 
       await chatTextarea.waitFor({
@@ -152,7 +151,7 @@ class GoogleMeetBot {
       await page.waitForTimeout(200);
 
       // 5️⃣ Type like a human
-      await chatTextarea.type(message, { delay: 25 });
+      await chatTextarea.pressSequentially(message, { delay: 10 });
 
       // 6️⃣ Allow Meet to enable send internally
       await page.waitForTimeout(300);
@@ -165,7 +164,7 @@ class GoogleMeetBot {
     } catch (error) {
       console.error(
         "Google Meet chat send failed:",
-        error instanceof Error ? error.message : error
+        error instanceof Error ? error.message : error,
       );
     }
   }
@@ -198,7 +197,7 @@ class GoogleMeetBot {
     await this.initialize();
     await this.openMeet(meetUrl);
 
-    this.params.onCallbacks?.onJoining?.();
+    this.params.onCallbacks?.onJoining?.(meetUrl);
 
     const pollInterval = setInterval(async () => {
       try {
@@ -218,7 +217,7 @@ class GoogleMeetBot {
           await this.turnOnCaptions();
           const proceedTranscript = await captionsController.initialize(
             this.page,
-            meetingId
+            meetingId,
           );
           if (!proceedTranscript) {
             chatMessage =
