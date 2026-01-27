@@ -27,6 +27,8 @@ model Meeting{
   meetingBotSession MeetingBotSession[]
   executionArtifacts ExecutionArtifact[]
 captionEvents CaptionEvent[]
+  interruption EmailFollowUpInterruption[]
+  emailDraft EmailDraft[]
 
 }
 
@@ -107,10 +109,58 @@ model CaptionEvent {
 }
 
 
+
+model EmailFollowUpInterruption {
+  id          String   @id @default(cuid())
+  meetingId   String
+
+  toolName    String   // "sendFollowupEmail"
+
+  to          String?
+  subject     String
+  body        String
+
+  status      EmailFollowUpStatus @default(PENDING)
+
+  expiresAt   DateTime
+
+  decidedAt   DateTime?
+  decidedBy   String?
+
+  createdAt   DateTime @default(now())
+
+  meeting     Meeting  @relation(fields: [meetingId], references: [id])
+  emailDraft  EmailDraft[]
+
+  @@index([meetingId])
+  @@index([status])
+}
+
+
+
+model EmailDraft{
+  id String            @id @default(cuid())
+  meetingId      String
+  to_original String?
+  to_confirmed String?
+  interruption_id String @unique
+  subject String
+  edited_subject String?
+  original_body String
+  edited_body String?
+  createdAt  DateTime          @default(now())
+interruption EmailFollowUpInterruption @relation(fields: [interruption_id],references: [id])
+   meeting Meeting @relation(fields: [meetingId],references: [id])
+ @@index([meetingId])
+}
+
+
 model SlackEvent {
   id          String   @id
   receivedAt DateTime @default(now())
 }
+
+
 
 
 enum SourceType {
@@ -123,6 +173,14 @@ BLOCKER
 PENDING
 RISK
 DECISION
+}
+
+
+enum EmailFollowUpStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
 }
 
 

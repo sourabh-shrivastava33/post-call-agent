@@ -4,5 +4,6 @@ import SlackController from "./slack.controller.js";
 const router = express.Router();
 
 router.post("/events", SlackController.handleEvent);
+router.post("/interactive", SlackController.slackInteractionsEvent);
 
 export default router;

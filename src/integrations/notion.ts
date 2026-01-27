@@ -74,6 +74,9 @@ class NotionIntegration {
           Name: {
             title: [{ text: { content: input.title } }],
           },
+          Summary: {
+           rich_text: [{ text: { content: input.summary } }],
+          },
 
           "External ID": {
             rich_text: [{ text: { content: input.externalId } }],
@@ -151,6 +154,12 @@ class NotionIntegration {
     if (updates.title !== undefined) {
       properties.Name = {
         title: [{ text: { content: updates.title } }],
+      };
+    }
+
+    if (updates.summary !== undefined) {
+      properties.Summary = {
+        title: [{ text: { content: updates.summary } }],
       };
     }
 

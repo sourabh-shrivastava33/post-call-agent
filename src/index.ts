@@ -13,6 +13,15 @@ app.use(
   }),
 );
 
+app.use(
+  express.urlencoded({
+    extended: true,
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
 app.use("/slack", slackRouter);
 
 app.use("/health", (req, res) => {

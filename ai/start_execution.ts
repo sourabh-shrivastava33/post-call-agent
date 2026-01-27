@@ -45,10 +45,7 @@ async function startExecution(meetingId: string): Promise<void> {
     const transcriptSegment: TranscriptSegment[] | undefined =
       await transcriptService.getAllTranscriptSegmentByMeetingId(meetingId);
 
-    if (
-      (transcriptSegment && transcriptSegment.length) ||
-      process.env.DEV_TEST
-    ) {
+    if (transcriptSegment && transcriptSegment.length) {
       let executionContext: ExecutionContext = {
         meetingId: meetingId,
         currentDateTime: new Date().toISOString(),

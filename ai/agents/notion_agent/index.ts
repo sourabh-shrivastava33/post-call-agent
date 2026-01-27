@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Runner } from "@openai/agents";
 import BaseAgent from "../baseAgent";
 import { z } from "zod";
@@ -88,8 +89,10 @@ export default class NotionExecutionAgent extends BaseAgent {
       executionSuccessBlocks({
         created: parsed.created,
         updated: parsed.updated,
-        notionUrl: "",
+        notionUrl: process.env.NOTION_DB_URL!,
       }),
+      undefined,
+      process.env.SLACK_POST_CALL_EXECUTION_CHANNEL,
     );
     // 🔒 deterministic Slack confirmation
 

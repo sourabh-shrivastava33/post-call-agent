@@ -45,3 +45,9 @@ export type ExtendedBlockersType = {
   add: BaseBlockersAdd[];
   update: ExtendedBlockersUpdate[];
 };
+
+export interface SendFollowupEmailArgs {
+  to?: string | null;
+  subject: string;
+  body: string;
+}

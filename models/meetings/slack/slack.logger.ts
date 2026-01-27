@@ -6,7 +6,10 @@ export class SlackLogger {
   private slack = new WebClient(process.env.SLACK_BOT_TOKEN!);
   private channel = process.env.SLACK_POST_CALL_EXECUTION_CHANNEL!;
 
-  async log(blocks: any[], text = "Post-call update") {
+  async log(blocks: any[], text = "Post-call update", channel?: string) {
+    if (channel) {
+      this.channel = channel;
+    }
     try {
       return this.slack.chat.postMessage({
         channel: this.channel,
