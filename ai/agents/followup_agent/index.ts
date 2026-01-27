@@ -23,7 +23,7 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
       FollowupAgentConstants.name,
       FOLLOWUP_AGENT_INSTRUCTIONS,
       FollowupAgentConstants.model,
-      FollowUpAgentOutputType,
+      undefined, // No output schema - this agent uses interruptions
       FollowupAgentConstants.modelSettings,
       [sendFollowupEmail as any],
     );
@@ -46,6 +46,9 @@ class FollowUpAgent extends BaseAgent<ExecutionContext> {
 
     const result = await this.runner.run(agent, userQuery);
 
+    if (result.interruptions.length) {
+      return result;
+    }
     if (!result?.finalOutput) {
       return { emails: [], warnings: ["empty_output"] };
     }
